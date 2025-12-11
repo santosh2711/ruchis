@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="theme-color" content="#f97316" />
+	<title>RUCHI | Order Summary</title>
+	<style>
+		:root {
+			--orange: #f97316;
+			--orange-dark: #ea580c;
+			--black: #0f172a;
+			--border: #e2e8f0;
+			--gray: #f8fafc;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			font-family: "Segoe UI", Tahoma, sans-serif;
+			background: #ffffff;
+			color: var(--black);
+			padding: 0 16px 32px;
+		}
+
+		header {
+			position: sticky;
+			top: 0;
+			background: #ffffff;
+			padding: 16px 0 12px;
+			border-bottom: 1px solid var(--border);
+			z-index: 20;
+		}
+
+		h1 {
+			margin: 0;
+			font-size: 22px;
+			color: var(--orange-dark);
+		}
+
+		.meta {
+			display: flex;
+			gap: 10px;
+			flex-wrap: wrap;
+			margin-top: 6px;
+			font-weight: 600;
+			color: #475569;
+		}
+
+		.pill {
+			border: 1px solid var(--border);
+			background: var(--gray);
+			border-radius: 999px;
+			padding: 6px 12px;
+		}
+
+		.list {
+			margin-top: 16px;
+			display: grid;
+			gap: 12px;
+		}
+
+		.card {
+			display: grid;
+			grid-template-columns: auto 1fr auto;
+			gap: 12px;
+			align-items: center;
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			padding: 10px;
+			background: #ffffff;
+			box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+			cursor: pointer;
+		}
+
+		.thumb {
+			width: 64px;
+			height: 64px;
+			border-radius: 10px;
+			object-fit: cover;
+			background: var(--gray);
+		}
+
+		.info h3 {
+			margin: 0 0 4px;
+			font-size: 15px;
+			color: var(--black);
+		}
+
+		.info .meta-line {
+			margin: 0;
+			color: #475569;
+			font-size: 13px;
+		}
+
+		.note-line {
+			margin: 4px 0 0;
+			color: #0f172a;
+			font-size: 13px;
+			font-weight: 600;
+		}
+
+		.price {
+			font-weight: 800;
+			color: var(--black);
+			text-align: right;
+		}
+
+		.right-col {
+			display: flex;
+			flex-direction: column;
+			align-items: flex-end;
+			gap: 6px;
+		}
+
+		.delete-btn {
+			border: 1px solid var(--border);
+			background: #fff7ed;
+			color: var(--orange-dark);
+			border-radius: 10px;
+			padding: 6px 8px;
+			font-size: 12px;
+			font-weight: 800;
+			cursor: pointer;
+			transition: background 0.15s ease, transform 0.15s ease;
+		}
+
+		.delete-btn:active { transform: scale(0.96); }
+
+		.tap-edit {
+			margin-top: 4px;
+			font-size: 12px;
+			color: var(--orange-dark);
+			font-weight: 700;
+		}
+
+		.totals {
+			margin-top: 16px;
+			border-top: 1px solid var(--border);
+			padding-top: 12px;
+			display: flex;
+			justify-content: space-between;
+			font-weight: 800;
+			font-size: 16px;
+		}
+
+		.actions {
+			margin-top: 18px;
+			display: flex;
+			gap: 10px;
+			flex-wrap: wrap;
+		}
+
+		button {
+			border: none;
+			border-radius: 12px;
+			padding: 12px 16px;
+			font-weight: 700;
+			cursor: pointer;
+			transition: background 0.2s ease, transform 0.2s ease;
+		}
+
+		.primary {
+			background: var(--orange);
+			color: #ffffff;
+		}
+
+		.secondary {
+			background: #ffffff;
+			color: var(--black);
+			border: 1px solid var(--border);
+		}
+
+		button:active { transform: scale(0.98); }
+
+		.empty {
+			margin-top: 20px;
+			text-align: center;
+			color: #475569;
+			font-weight: 600;
+		}
+
+		.modal-overlay {
+			position: fixed;
+			inset: 0;
+			background: rgba(0,0,0,0.35);
+			display: none;
+			align-items: center;
+			justify-content: center;
+			z-index: 200;
+		}
+
+		.modal-overlay.active { display: flex; }
+
+		.modal {
+			background: #ffffff;
+			border: 1px solid var(--border);
+			border-radius: 14px;
+			padding: 18px 16px 14px;
+			width: min(360px, 90vw);
+			box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+		}
+
+		.modal h3 {
+			margin: 0 0 8px;
+			font-size: 18px;
+			color: var(--black);
+		}
+
+		.modal p {
+			margin: 0 0 14px;
+			color: #475569;
+			font-size: 14px;
+			line-height: 1.5;
+		}
+
+		.modal-actions {
+			display: flex;
+			justify-content: flex-end;
+			gap: 10px;
+		}
+
+		.modal-btn {
+			border-radius: 10px;
+			padding: 10px 14px;
+			font-weight: 800;
+			cursor: pointer;
+			border: 1px solid var(--border);
+		}
+
+		.modal-btn.secondary { background: #ffffff; color: var(--black); }
+		.modal-btn.danger { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+	</style>
+</head>
+<body>
+	<header>
+		<h1>Order Summary</h1>
+		<button class="secondary" id="header-back" type="button" style="margin-top:10px;">Back to menu</button>
+		<div class="meta">
+			<span class="pill">Table: <span id="table-number">-</span></span>
+			<span class="pill">Service: <span id="service-type">-</span></span>
+			<span class="pill">Items: <span id="item-count">0</span></span>
+		</div>
+	</header>
+
+	<div id="content"></div>
+
+	<div class="modal-overlay" id="delete-modal">
+		<div class="modal">
+			<h3>Remove this item?</h3>
+			<p id="delete-item-text">This will remove the selected item from your cart.</p>
+			<div class="modal-actions">
+				<button class="modal-btn secondary" id="delete-cancel" type="button">Cancel</button>
+				<button class="modal-btn danger" id="delete-confirm" type="button">Remove</button>
+			</div>
+		</div>
+	</div>
+
+	<script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+		import { getFirestore, addDoc, collection, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+		const firebaseConfig = {
+			apiKey: "AIzaSyCS1WJJQ7QQnqRhtwuTQCPpjjb3tIjQ3nQ",
+			authDomain: "ruchi-53a14.firebaseapp.com",
+			projectId: "ruchi-53a14",
+			storageBucket: "ruchi-53a14.appspot.com",
+			messagingSenderId: "473906899822",
+			appId: "1:473906899822:web:07640feeca4e379aaa6f7f",
+			measurementId: "G-J1CQDC048C"
+		};
+
+		const app = initializeApp(firebaseConfig);
+		const db = getFirestore(app);
+
+		const urlParams = new URLSearchParams(window.location.search);
+		const table = urlParams.get("table") || "1";
+		const service = urlParams.get("service") || "-";
+		const cartKey = `cart_table${table}`;
+
+		const tableEl = document.getElementById("table-number");
+		const serviceEl = document.getElementById("service-type");
+		const itemCountEl = document.getElementById("item-count");
+		const contentEl = document.getElementById("content");
+		const headerBackBtn = document.getElementById("header-back");
+		const deleteModal = document.getElementById("delete-modal");
+		const deleteConfirmBtn = document.getElementById("delete-confirm");
+		const deleteCancelBtn = document.getElementById("delete-cancel");
+		const deleteItemText = document.getElementById("delete-item-text");
+		let pendingDeleteUid = null;
+		let pendingDeleteId = null;
+		let pendingDeleteNote = null;
+
+		tableEl.textContent = table;
+		serviceEl.textContent = service.replace(/-/g, " ") || "-";
+
+		const formatPrice = (v) => `RM ${Number(v || 0).toFixed(2)}`;
+		const genUid = () => `uid-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+		const loadCart = () => {
+			try {
+				const stored = localStorage.getItem(cartKey);
+				const parsed = stored ? JSON.parse(stored) : [];
+				let changed = false;
+				parsed.forEach((item) => {
+					if (!item.uid) {
+						item.uid = genUid();
+						changed = true;
+					}
+				});
+				if (changed) {
+					localStorage.setItem(cartKey, JSON.stringify(parsed));
+				}
+				return parsed;
+			} catch (e) {
+				return [];
+			}
+		};
+
+		const render = () => {
+			const cart = loadCart();
+			itemCountEl.textContent = cart.reduce((s, i) => s + (i.qty || 0), 0);
+
+			if (!cart.length) {
+				contentEl.innerHTML = '<div class="empty">No items in the cart. Go back to add some.</div>';
+				return;
+			}
+
+			const list = document.createElement("div");
+			list.className = "list";
+
+			let total = 0;
+
+			cart.forEach((item) => {
+				const qty = item.qty || 0;
+				const price = Number(item.price) || 0;
+				const lineTotal = qty * price;
+				total += lineTotal;
+
+				const card = document.createElement("div");
+				card.className = "card";
+
+				const img = document.createElement("img");
+				img.className = "thumb";
+				img.src = item.image || "https://via.placeholder.com/120x120?text=No+Image";
+				img.alt = item.name || "Item";
+
+				const info = document.createElement("div");
+				info.className = "info";
+				const name = document.createElement("h3");
+				name.textContent = item.name || "Item";
+				const meta = document.createElement("p");
+				meta.className = "meta-line";
+				meta.textContent = `${qty} x ${formatPrice(price)}`;
+				info.appendChild(name);
+				info.appendChild(meta);
+
+				const tap = document.createElement("p");
+				tap.className = "tap-edit";
+				tap.textContent = "Tap to edit";
+				info.appendChild(tap);
+
+				if (item.note) {
+					const noteLine = document.createElement("p");
+					noteLine.className = "note-line";
+					noteLine.textContent = `Note: ${item.note}`;
+					info.appendChild(noteLine);
+				}
+
+				const priceEl = document.createElement("div");
+				priceEl.className = "price";
+				priceEl.textContent = formatPrice(lineTotal);
+
+				const delBtn = document.createElement("button");
+				delBtn.className = "delete-btn";
+				delBtn.type = "button";
+				delBtn.textContent = "🗑️";
+				delBtn.addEventListener("click", (e) => {
+					e.stopPropagation();
+					pendingDeleteUid = item.uid || null;
+					pendingDeleteId = item.id || null;
+					pendingDeleteNote = item.note || "";
+					deleteItemText.textContent = `Remove ${item.name || "this item"} from your cart?`;
+					deleteModal.classList.add("active");
+				});
+
+				const rightCol = document.createElement("div");
+				rightCol.className = "right-col";
+				rightCol.appendChild(priceEl);
+				rightCol.appendChild(delBtn);
+
+				card.appendChild(img);
+				card.appendChild(info);
+				card.appendChild(rightCol);
+
+				card.addEventListener("click", () => {
+					const params = new URLSearchParams({
+						table,
+						service,
+						id: item.id,
+						name: item.name || "",
+						price: item.price || 0,
+						image: item.image || "",
+						category: item.category || "",
+						note: item.note || "",
+						cartUid: item.uid || "",
+					});
+					window.location.href = `item.html?${params.toString()}`;
+				});
+
+				list.appendChild(card);
+			});
+
+			const totals = document.createElement("div");
+			totals.className = "totals";
+			totals.innerHTML = `<span>Total</span><span>${formatPrice(total)}</span>`;
+
+			const actions = document.createElement("div");
+			actions.className = "actions";
+
+			const backBtn = document.createElement("button");
+			backBtn.className = "secondary";
+			backBtn.textContent = "Back to menu";
+			backBtn.addEventListener("click", () => {
+				const params = new URLSearchParams({ table, service });
+				window.location.href = `menu.html?${params.toString()}`;
+			});
+
+			const clearBtn = document.createElement("button");
+			clearBtn.className = "secondary";
+			clearBtn.textContent = "Clear cart";
+			clearBtn.addEventListener("click", () => {
+				localStorage.removeItem(cartKey);
+				render();
+			});
+
+			const confirmBtn = document.createElement("button");
+			confirmBtn.className = "primary";
+			confirmBtn.textContent = "Confirm order";
+			confirmBtn.addEventListener("click", async () => {
+				const cart = loadCart();
+				if (!cart.length) return;
+				confirmBtn.disabled = true;
+				confirmBtn.textContent = "Sending...";
+				try {
+					const items = cart.map((item) => ({
+						name: item.name || "Item",
+						qty: item.qty || 1,
+						prep: "kitchen",
+						note: item.note || ""
+					}));
+					const totalPrice = cart.reduce((sum, i) => sum + (Number(i.price) || 0) * (i.qty || 0), 0);
+					const docRef = await addDoc(collection(db, "orders"), {
+						table,
+						service,
+						items,
+						notes: "",
+						totalPrice,
+						paymentStatus: "unpaid",
+						orderStatus: "in-kitchen",
+						timestamp: Date.now(),
+						orderId: "" // set after creation for doc id
+					});
+					await updateDoc(docRef, { orderId: docRef.id });
+					const params = new URLSearchParams({ table, service, orderId: docRef.id });
+					window.location.href = `order-status.html?${params.toString()}`;
+				} catch (err) {
+					console.error("Failed to send order", err);
+					confirmBtn.disabled = false;
+					confirmBtn.textContent = "Confirm order";
+					alert("Could not send order. Please try again.");
+				}
+			});
+
+			actions.appendChild(backBtn);
+			actions.appendChild(clearBtn);
+			actions.appendChild(confirmBtn);
+
+			contentEl.innerHTML = "";
+			contentEl.appendChild(list);
+			contentEl.appendChild(totals);
+			contentEl.appendChild(actions);
+		};
+
+		headerBackBtn?.addEventListener("click", () => {
+			const params = new URLSearchParams({ table, service });
+			window.location.href = `menu.html?${params.toString()}`;
+		});
+
+		deleteCancelBtn?.addEventListener("click", () => {
+			pendingDeleteUid = null;
+			pendingDeleteId = null;
+			pendingDeleteNote = null;
+			deleteModal.classList.remove("active");
+		});
+
+		deleteConfirmBtn?.addEventListener("click", () => {
+			const cartNow = loadCart();
+			const filtered = cartNow.filter((c) => {
+				if (pendingDeleteUid) return c.uid !== pendingDeleteUid;
+				return !(c.id === pendingDeleteId && (c.note || "") === (pendingDeleteNote || ""));
+			});
+			localStorage.setItem(cartKey, JSON.stringify(filtered));
+			pendingDeleteUid = null;
+			pendingDeleteId = null;
+			pendingDeleteNote = null;
+			deleteModal.classList.remove("active");
+			render();
+		});
+
+		render();
+	</script>
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="theme-color" content="#f97316" />
+	<title>RUCHI | Login / Signup</title>
+	<style>
+		:root {
+			--orange: #f97316;
+			--orange-dark: #ea580c;
+			--black: #0f172a;
+			--border: #e2e8f0;
+			--gray: #f8fafc;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			font-family: "Segoe UI", Tahoma, sans-serif;
+			background: linear-gradient(180deg, #fff7ed 0%, #ffffff 50%);
+			color: var(--black);
+			min-height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 24px;
+		}
+
+		.card {
+			width: min(420px, 100%);
+			background: #ffffff;
+			border: 1px solid var(--border);
+			border-radius: 16px;
+			padding: 20px 20px 18px;
+			box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+		}
+
+		h1 {
+			margin: 0 0 8px;
+			font-size: 22px;
+			color: var(--orange-dark);
+		}
+
+		.sub {
+			margin: 0 0 16px;
+			color: #475569;
+			font-weight: 600;
+		}
+
+		.section-title {
+			margin: 16px 0 8px;
+			font-weight: 800;
+			color: var(--black);
+		}
+
+		.button {
+			width: 100%;
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			padding: 12px 14px;
+			font-weight: 700;
+			cursor: pointer;
+			background: #ffffff;
+			transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+		}
+
+		.button:active { transform: scale(0.98); }
+		.button.primary {
+			background: var(--orange);
+			color: #ffffff;
+			border-color: var(--orange);
+		}
+		.button.google {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 8px;
+			font-weight: 700;
+		}
+
+		.input {
+			width: 100%;
+			padding: 11px 12px;
+			border: 1px solid var(--border);
+			border-radius: 10px;
+			font-size: 14px;
+		}
+
+		.row { display: flex; gap: 10px; }
+		.row > .button { flex: 1; }
+
+		.link-btn {
+			border: none;
+			background: transparent;
+			color: var(--orange-dark);
+			font-weight: 700;
+			cursor: pointer;
+			padding: 6px 0;
+		}
+
+		.divider {
+			margin: 14px 0 10px;
+			text-align: center;
+			color: #94a3b8;
+			font-weight: 700;
+		}
+
+		.status {
+			margin-top: 12px;
+			font-weight: 700;
+			color: var(--orange-dark);
+		}
+
+		#error { color: #dc2626; font-weight: 700; margin-top: 10px; }
+
+		.user-info {
+			margin-top: 12px;
+			padding: 10px;
+			border: 1px dashed var(--border);
+			border-radius: 12px;
+			background: #fff7ed;
+		}
+	</style>
+</head>
+<body>
+	<div class="card">
+		<h1>Welcome to RUCHI</h1>
+		<p class="sub">Sign in with your email or Google.</p>
+
+		<div class="section-title">Email</div>
+		<input id="email-input" class="input" type="email" placeholder="Email address" aria-label="Email" style="margin-bottom:10px;" />
+		<input id="password-input" class="input" type="password" placeholder="Password" aria-label="Password" />
+		<div class="row" style="margin-top:10px;">
+			<button id="email-submit" class="button primary" type="button">Sign in</button>
+		</div>
+		<button id="toggle-mode" class="link-btn" type="button">First time here? Create an account</button>
+
+		<div class="divider">or</div>
+
+		<button id="google-btn" class="button google" type="button">Continue with Google</button>
+
+		<div id="error"></div>
+		<div id="status" class="status"></div>
+		<div id="user-info" class="user-info" style="display:none;"></div>
+		<div class="row" style="margin-top:10px;">
+			<button id="sign-out" class="button" type="button" style="display:none;">Sign out</button>
+		</div>
+	</div>
+
+	<script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+		import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+		const firebaseConfig = {
+			apiKey: "AIzaSyCS1WJJQ7QQnqRhtwuTQCPpjjb3tIjQ3nQ",
+			authDomain: "ruchi-53a14.firebaseapp.com",
+			projectId: "ruchi-53a14",
+			storageBucket: "ruchi-53a14.appspot.com",
+			messagingSenderId: "473906899822",
+			appId: "1:473906899822:web:07640feeca4e379aaa6f7f",
+			measurementId: "G-J1CQDC048C"
+		};
+
+		const app = initializeApp(firebaseConfig);
+		const auth = getAuth(app);
+		const provider = new GoogleAuthProvider();
+
+		const googleBtn = document.getElementById("google-btn");
+		const emailInput = document.getElementById("email-input");
+		const passwordInput = document.getElementById("password-input");
+		const emailSubmitBtn = document.getElementById("email-submit");
+		const toggleModeBtn = document.getElementById("toggle-mode");
+		const errorEl = document.getElementById("error");
+		const statusEl = document.getElementById("status");
+		const userInfoEl = document.getElementById("user-info");
+		const signOutBtn = document.getElementById("sign-out");
+
+		let mode = "signin"; // or "signup"
+		let redirected = false;
+
+		const showError = (msg, code) => {
+			errorEl.textContent = code ? `${msg} (${code})` : (msg || "");
+			if (msg) statusEl.textContent = "";
+		};
+
+		const showStatus = (msg) => {
+			statusEl.textContent = msg || "";
+		};
+
+		const friendlyAuthError = (err) => {
+			const code = err?.code || "";
+			if (code === "auth/invalid-credential" || code === "auth/user-not-found" || code === "auth/wrong-password") {
+				return "That email or password didn't match. Please try again or create an account.";
+			}
+			return err?.message || "Something went wrong. Please try again.";
+		};
+
+		googleBtn.addEventListener("click", async () => {
+			showError("");
+			showStatus("Signing in with Google...");
+			try {
+				await signInWithPopup(auth, provider);
+				showStatus("Signed in with Google.");
+			} catch (err) {
+				showError(err?.message || "Google sign-in failed.", err?.code);
+			}
+		});
+
+
+		const applyMode = () => {
+			if (mode === "signin") {
+				emailSubmitBtn.textContent = "Sign in";
+				toggleModeBtn.textContent = "First time here? Create an account";
+			} else {
+				emailSubmitBtn.textContent = "Create account";
+				toggleModeBtn.textContent = "Already have an account? Sign in";
+			}
+		};
+
+		toggleModeBtn.addEventListener("click", () => {
+			mode = mode === "signin" ? "signup" : "signin";
+			applyMode();
+		});
+
+		emailSubmitBtn.addEventListener("click", async () => {
+			showError("");
+			const email = (emailInput.value || "").trim();
+			const pass = passwordInput.value || "";
+			if (!email || !pass) {
+				showError("Enter email and password.");
+				return;
+			}
+			if (mode === "signup") {
+				showStatus("Creating account...");
+				try {
+					await createUserWithEmailAndPassword(auth, email, pass);
+					showStatus("Account created and signed in.");
+				} catch (err) {
+					showError(err?.message || "Email sign-up failed.", err?.code);
+				}
+			} else {
+				showStatus("Signing in...");
+				try {
+					await signInWithEmailAndPassword(auth, email, pass);
+					showStatus("Signed in.");
+				} catch (err) {
+					showError(friendlyAuthError(err));
+				}
+			}
+		});
+
+		signOutBtn.addEventListener("click", async () => {
+			showError("");
+			showStatus("Signing out...");
+			try {
+				await signOut(auth);
+				showStatus("Signed out.");
+			} catch (err) {
+				showError(err?.message || "Sign out failed.", err?.code);
+			}
+		});
+
+		onAuthStateChanged(auth, (user) => {
+			if (user) {
+				const name = user.displayName || "Guest";
+				const email = user.email || "-";
+				userInfoEl.style.display = "block";
+				userInfoEl.innerHTML = `Signed in as <strong>${name}</strong><br>Email: ${email}`;
+				signOutBtn.style.display = "block";
+				if (!redirected) {
+					redirected = true;
+					window.location.href = "menu.html";
+				}
+			} else {
+				userInfoEl.style.display = "none";
+				userInfoEl.textContent = "";
+				signOutBtn.style.display = "none";
+			}
+		});
+
+		applyMode();
+	</script>
+</body>
+</html>

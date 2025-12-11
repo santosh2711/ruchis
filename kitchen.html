@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="theme-color" content="#f97316" />
+	<title>RUCHI | Kitchen Display</title>
+	<style>
+		:root {
+			--blue: #2563eb;
+			--orange: #f97316;
+			--black: #0f172a;
+			--gray: #f8fafc;
+			--border: #e2e8f0;
+			--card: #ffffff;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			font-family: "Segoe UI", Tahoma, sans-serif;
+			background: #f5f7fb;
+			color: var(--black);
+			padding: 20px 16px 28px;
+		}
+
+		header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			margin: 0 auto 16px;
+			max-width: 1280px;
+		}
+
+		h1 {
+			margin: 0;
+			font-size: 28px;
+			letter-spacing: 0.4px;
+			color: var(--orange);
+		}
+
+		.subtle {
+			color: #475569;
+			font-weight: 600;
+			margin: 0;
+			font-size: 14px;
+		}
+
+		.sections {
+			display: grid;
+			grid-template-columns: 1fr;
+			gap: 16px;
+			max-width: 1280px;
+			margin: 0 auto;
+		}
+
+		.panel {
+			background: var(--card);
+			border: 1px solid var(--border);
+			border-radius: 16px;
+			padding: 14px;
+			box-shadow: 0 14px 32px rgba(0,0,0,0.05);
+		}
+
+		.panel h2 {
+			margin: 0 0 12px;
+			font-size: 20px;
+			letter-spacing: 0.2px;
+			color: var(--orange);
+		}
+
+		.orders {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.order-card {
+			border: 1px solid var(--border);
+			border-radius: 16px;
+			padding: 14px;
+			background: #ffffff;
+			box-shadow: 0 12px 26px rgba(0,0,0,0.06);
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+			position: relative;
+			width: 100%;
+			max-width: 720px;
+			margin: 0 auto;
+		}
+
+		.order-card.processing {
+			filter: blur(0.8px);
+			opacity: 0.72;
+			pointer-events: none;
+		}
+
+		.order-card.new { animation: pop 0.45s ease; }
+		.order-card.ready {
+			filter: blur(0.8px);
+			opacity: 0.72;
+			pointer-events: none;
+		}
+
+		@keyframes pop {
+			0% { transform: scale(0.96); box-shadow: 0 0 0 rgba(0,0,0,0); }
+			100% { transform: scale(1); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+		}
+
+		.order-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.order-id { font-weight: 800; font-size: 17px; }
+
+		.pill {
+			padding: 7px 12px;
+			border-radius: 999px;
+			font-weight: 800;
+			font-size: 12px;
+			color: #fff;
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			letter-spacing: 0.35px;
+			text-transform: uppercase;
+		}
+
+		.pill.table { background: #0f172a; }
+		.pill.dine { background: var(--blue); }
+		.pill.take { background: var(--orange); }
+
+		.items {
+			margin: 0;
+			padding-left: 18px;
+			font-weight: 700;
+			font-size: 15px;
+		}
+
+		.items li { margin: 3px 0; line-height: 1.4; }
+
+		.notes {
+			margin: 0;
+			padding: 9px 11px;
+			border-radius: 10px;
+			background: #eef2ff;
+			color: #1e293b;
+			font-weight: 700;
+			font-size: 14px;
+		}
+
+		.meta { color: #475569; font-size: 13px; font-weight: 700; }
+
+		.btn {
+			border: none;
+			border-radius: 10px;
+			padding: 13px 14px;
+			font-weight: 800;
+			cursor: pointer;
+			background: var(--blue);
+			color: #ffffff;
+			transition: transform 0.15s ease, box-shadow 0.15s ease;
+			font-size: 15px;
+		}
+
+		.btn:active { transform: scale(0.985); }
+
+		.empty {
+			color: #94a3b8;
+			font-weight: 700;
+			padding: 12px;
+		}
+
+		@media (max-width: 1024px) {
+			.sections { grid-template-columns: 1fr; padding: 0 4px; }
+			.orders { gap: 10px; }
+			.order-card { padding: 12px; width: 100%; max-width: 100%; }
+			header { flex-direction: column; align-items: flex-start; gap: 6px; }
+		}
+	</style>
+</head>
+<body>
+	<header>
+		<div>
+			<h1>Kitchen Display</h1>
+			<p class="subtle">Live orders from Firestore</p>
+		</div>
+		<div class="subtle" id="updated-at">—</div>
+	</header>
+
+	<div class="sections">
+		<div class="panel">
+			<h2>In Kitchen</h2>
+			<div id="in-kitchen" class="orders"></div>
+		</div>
+	</div>
+
+	<!-- Notification sound; place a small beep file as notify.mp3 next to this HTML -->
+	<audio id="notify-audio" src="notify.mp3" preload="auto"></audio>
+
+	<script type="module" src="kitchen.js"></script>
+</body>
+</html>

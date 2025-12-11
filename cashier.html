@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="theme-color" content="#f97316" />
+	<title>RUCHI Cashier Dashboard</title>
+	<style>
+		:root {
+			--orange: #f97316;
+			--orange-dark: #ea580c;
+			--blue: #2563eb;
+			--green: #16a34a;
+			--red: #dc2626;
+			--black: #0f172a;
+			--border: #e2e8f0;
+			--gray: #f8fafc;
+			--card: #ffffff;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			font-family: "Segoe UI", Tahoma, sans-serif;
+			background: #f5f7fb;
+			color: var(--black);
+			padding: 18px 14px 28px;
+		}
+
+		header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 12px;
+			max-width: 1200px;
+			margin: 0 auto 16px;
+		}
+
+		h1 {
+			margin: 0;
+			font-size: 26px;
+			letter-spacing: 0.4px;
+			color: var(--orange);
+		}
+
+		.subtle { color: #475569; font-weight: 600; font-size: 14px; margin: 0; }
+		.header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+		.logout-btn {
+			border: 1px solid var(--border);
+			background: #fff;
+			color: var(--black);
+			padding: 8px 12px;
+			border-radius: 10px;
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+		main { max-width: 1200px; margin: 0 auto; display: grid; gap: 16px; }
+
+		.section {
+			background: var(--card);
+			border: 1px solid var(--border);
+			border-radius: 16px;
+			box-shadow: 0 12px 30px rgba(0,0,0,0.06);
+			padding: 14px;
+		}
+
+		.section h2 {
+			margin: 0 0 10px;
+			font-size: 18px;
+			color: var(--orange-dark);
+		}
+
+		.orders { display: grid; gap: 12px; }
+
+		.card {
+			background: #fff;
+			border: 1px solid var(--border);
+			border-radius: 14px;
+			padding: 12px;
+			box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.card-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			gap: 10px;
+			flex-wrap: wrap;
+		}
+
+		.title { font-weight: 800; font-size: 16px; }
+
+		.pills { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+		.pill {
+			border-radius: 999px;
+			padding: 6px 10px;
+			font-weight: 800;
+			font-size: 12px;
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			color: #fff;
+			letter-spacing: 0.2px;
+		}
+
+		.pill.table { background: #0f172a; }
+		.pill.dine { background: var(--blue); }
+		.pill.take { background: var(--orange); }
+		.pill.paid { background: var(--green); }
+		.pill.unpaid { background: #1e293b; }
+		.pill.cancelled { background: var(--red); }
+		.pill.ready { background: var(--green); }
+		.pill.kitchen { background: #0f172a; }
+		.pill.buffet { background: #475569; }
+
+		.items { margin: 0; padding-left: 18px; font-weight: 700; }
+		.items li { margin: 3px 0; }
+		.item-meta { color: #475569; font-weight: 600; font-size: 13px; }
+
+		.row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+		.meta { color: #475569; font-size: 13px; font-weight: 700; }
+		.notes {
+			margin: 0;
+			padding: 8px 10px;
+			border-radius: 10px;
+			background: #fff7ed;
+			color: #9a3412;
+			font-weight: 700;
+		}
+
+		.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+		.btn {
+			border: none;
+			border-radius: 10px;
+			padding: 10px 12px;
+			font-weight: 800;
+			cursor: pointer;
+			transition: transform 0.15s ease, box-shadow 0.15s ease;
+		}
+		.btn:active { transform: scale(0.985); }
+		.btn.pay { background: var(--green); color: #fff; }
+		.btn.cancel { background: var(--red); color: #fff; }
+		.btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+		.badge { border-radius: 999px; padding: 4px 8px; font-weight: 800; font-size: 12px; }
+		.total { font-weight: 800; font-size: 15px; }
+
+		/* Modal */
+		.modal-overlay {
+			position: fixed;
+			inset: 0;
+			background: rgba(0,0,0,0.35);
+			display: none;
+			align-items: center;
+			justify-content: center;
+			z-index: 200;
+		}
+		.modal-overlay.active { display: flex; }
+
+		.modal {
+			background: #fff;
+			border-radius: 12px;
+			padding: 18px 16px;
+			width: min(360px, 90vw);
+			border: 1px solid var(--border);
+			box-shadow: 0 18px 40px rgba(0,0,0,0.12);
+		}
+		.modal h3 { margin: 0 0 8px; color: var(--black); }
+		.modal p { margin: 0 0 14px; color: #475569; font-weight: 600; }
+		.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+		.modal .btn { flex: 1; }
+
+		/* Auth overlay */
+		.auth-overlay {
+			position: fixed;
+			inset: 0;
+			background: rgba(0,0,0,0.45);
+			display: none;
+			align-items: center;
+			justify-content: center;
+			z-index: 300;
+		}
+
+		.auth-overlay.active { display: flex; }
+
+		.auth-card {
+			background: #fff;
+			border-radius: 14px;
+			padding: 18px 16px 16px;
+			width: min(380px, 92vw);
+			border: 1px solid var(--border);
+			box-shadow: 0 18px 40px rgba(0,0,0,0.14);
+		}
+
+		.auth-card h3 { margin: 0 0 8px; color: var(--orange-dark); }
+		.auth-card p { margin: 0 0 12px; color: #475569; font-weight: 600; }
+		.auth-card .input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; font-size: 14px; }
+		.auth-actions { display: flex; gap: 10px; margin-top: 4px; }
+		.auth-btn { flex: 1; border: none; border-radius: 10px; padding: 11px 12px; font-weight: 800; cursor: pointer; }
+		.auth-btn.primary { background: var(--orange); color: #fff; }
+		.auth-btn.secondary { background: #fff; color: var(--black); border: 1px solid var(--border); }
+		.auth-error { color: var(--red); font-weight: 700; margin-top: 6px; }
+
+		@media (max-width: 900px) {
+			header { flex-direction: column; align-items: flex-start; }
+			h1 { font-size: 24px; }
+		}
+	</style>
+</head>
+<body>
+	<header>
+		<div>
+			<h1>RUCHI Cashier Dashboard</h1>
+			<p class="subtle">Live orders from Firestore</p>
+		</div>
+		<div class="header-actions">
+			<div class="subtle" id="last-updated">Updated: —</div>
+			<button class="logout-btn" id="logout-btn" type="button" style="display:none;">Log out</button>
+		</div>
+	</header>
+
+	<main>
+		<section class="section">
+			<h2>Pending Orders</h2>
+			<div id="pending-list" class="orders"></div>
+		</section>
+
+		<section class="section">
+			<h2>Ready Orders</h2>
+			<div id="ready-list" class="orders"></div>
+		</section>
+
+		<section class="section">
+			<h2>Cancelled Orders</h2>
+			<div id="cancelled-list" class="orders"></div>
+		</section>
+	</main>
+
+	<!-- Cancel confirmation modal -->
+	<div class="modal-overlay" id="confirm-overlay">
+		<div class="modal">
+			<h3>Cancel this order?</h3>
+			<p>Are you sure you want to cancel this order?</p>
+			<div class="modal-actions">
+				<button class="btn cancel" id="confirm-yes" type="button">Yes, Cancel</button>
+				<button class="btn" id="confirm-no" type="button">No</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Auth overlay -->
+	<div class="auth-overlay" id="auth-overlay">
+		<div class="auth-card">
+			<h3>Cashier Login</h3>
+			<p>Sign in to manage orders.</p>
+			<input id="auth-email" class="input" type="email" placeholder="Email" />
+			<input id="auth-password" class="input" type="password" placeholder="Password" />
+			<div class="auth-actions">
+				<button class="auth-btn primary" id="auth-signin" type="button">Sign in</button>
+			</div>
+			<div class="auth-error" id="auth-error"></div>
+		</div>
+	</div>
+
+	<script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+		import { getFirestore, collection, query, orderBy, onSnapshot, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+		import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+		// Firebase config (provided)
+		const firebaseConfig = {
+			apiKey: "AIzaSyCS1WJJQ7QQnqRhtwuTQCPpjjb3tIjQ3nQ",
+			authDomain: "ruchi-53a14.firebaseapp.com",
+			projectId: "ruchi-53a14",
+			storageBucket: "ruchi-53a14.firebasestorage.app",
+			messagingSenderId: "473906899822",
+			appId: "1:473906899822:web:07640feeca4e379aaa6f7f",
+			measurementId: "G-J1CQDC048C"
+		};
+
+		// Init Firebase
+		const app = initializeApp(firebaseConfig);
+		const db = getFirestore(app);
+		const auth = getAuth(app);
+
+		// DOM references
+		const pendingList = document.getElementById("pending-list");
+		const readyList = document.getElementById("ready-list");
+		const cancelledList = document.getElementById("cancelled-list");
+		const lastUpdated = document.getElementById("last-updated");
+		const overlay = document.getElementById("confirm-overlay");
+		const confirmYes = document.getElementById("confirm-yes");
+		const confirmNo = document.getElementById("confirm-no");
+		const authOverlay = document.getElementById("auth-overlay");
+		const authEmail = document.getElementById("auth-email");
+		const authPassword = document.getElementById("auth-password");
+		const authSignin = document.getElementById("auth-signin");
+		const authError = document.getElementById("auth-error");
+		const logoutBtn = document.getElementById("logout-btn");
+
+		let pendingCancelId = null;
+
+		const formatCurrency = (v) => `RM ${Number(v || 0).toFixed(2)}`;
+		const formatTimestamp = (ts) => {
+			if (!ts) return "";
+			const value = typeof ts === "number" ? ts : ts?.toMillis?.();
+			if (!value) return "";
+			const d = new Date(value);
+			return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+		};
+
+		// Render a single order card
+		const renderOrder = (order) => {
+			const card = document.createElement("div");
+			card.className = "card";
+
+			const header = document.createElement("div");
+			header.className = "card-header";
+
+			const title = document.createElement("div");
+			title.className = "title";
+			title.textContent = order.orderId || order.id || "Order";
+
+			const pills = document.createElement("div");
+			pills.className = "pills";
+
+			const tablePill = document.createElement("span");
+			tablePill.className = "pill table";
+			tablePill.textContent = `Table ${order.table || "-"}`;
+			pills.appendChild(tablePill);
+
+			const servicePill = document.createElement("span");
+			servicePill.className = `pill ${order.service === "dine-in" ? "dine" : "take"}`;
+			servicePill.textContent = order.service === "dine-in" ? "Dine-in" : "Takeaway";
+			pills.appendChild(servicePill);
+
+			if (order.paymentStatus === "paid") {
+				const paidPill = document.createElement("span");
+				paidPill.className = "pill paid";
+				paidPill.textContent = "Paid";
+				pills.appendChild(paidPill);
+			} else {
+				const unpaid = document.createElement("span");
+				unpaid.className = "pill unpaid";
+				unpaid.textContent = "Unpaid";
+				pills.appendChild(unpaid);
+			}
+
+			const statusPill = document.createElement("span");
+			if (order.orderStatus === "cancelled") {
+				statusPill.className = "pill cancelled";
+				statusPill.textContent = "Cancelled";
+			} else if (order.orderStatus === "ready") {
+				statusPill.className = "pill ready";
+				statusPill.textContent = "Ready";
+			} else {
+				statusPill.className = "pill take";
+				statusPill.textContent = "In Kitchen";
+			}
+			pills.appendChild(statusPill);
+
+			header.appendChild(title);
+			header.appendChild(pills);
+			card.appendChild(header);
+
+			// Items
+			const ul = document.createElement("ul");
+			ul.className = "items";
+			(order.items || []).forEach((it) => {
+				const li = document.createElement("li");
+				const prepPill = document.createElement("span");
+				prepPill.className = `pill ${it.prep === "kitchen" ? "kitchen" : "buffet"}`;
+				prepPill.textContent = it.prep === "kitchen" ? "Kitchen Item" : "Buffet Item";
+				const name = document.createElement("span");
+				name.textContent = ` ${it.qty || 1} x ${it.name || "Item"}`;
+				const price = document.createElement("span");
+				price.className = "item-meta";
+				price.textContent = ` — ${formatCurrency((it.price || 0) * (it.qty || 1))}`;
+				li.appendChild(prepPill);
+				li.appendChild(name);
+				li.appendChild(price);
+				ul.appendChild(li);
+			});
+			card.appendChild(ul);
+
+			// Notes
+			if (order.notes) {
+				const notes = document.createElement("p");
+				notes.className = "notes";
+				notes.textContent = `Notes: ${order.notes}`;
+				card.appendChild(notes);
+			}
+
+			// Totals & meta
+			const metaRow = document.createElement("div");
+			metaRow.className = "row";
+			const total = document.createElement("div");
+			total.className = "total";
+			total.textContent = `Total: ${formatCurrency(order.totalPrice)}`;
+			const time = document.createElement("div");
+			time.className = "meta";
+			time.textContent = formatTimestamp(order.timestamp);
+			metaRow.appendChild(total);
+			metaRow.appendChild(time);
+			card.appendChild(metaRow);
+
+			// Actions
+			const actions = document.createElement("div");
+			actions.className = "actions";
+
+			const payBtn = document.createElement("button");
+			payBtn.className = "btn pay";
+			payBtn.textContent = "Mark as Paid";
+			payBtn.disabled = order.paymentStatus === "paid" || order.orderStatus === "cancelled";
+			payBtn.addEventListener("click", () => markAsPaid(order.id));
+
+			const cancelBtn = document.createElement("button");
+			cancelBtn.className = "btn cancel";
+			cancelBtn.textContent = "Cancel Order";
+			cancelBtn.disabled = order.orderStatus === "cancelled";
+			cancelBtn.addEventListener("click", () => openConfirm(order.id));
+
+			actions.appendChild(payBtn);
+			actions.appendChild(cancelBtn);
+			card.appendChild(actions);
+
+			return card;
+		};
+
+		// Render a list into a container
+		const renderList = (container, orders, emptyText) => {
+			container.innerHTML = "";
+			if (!orders.length) {
+				const empty = document.createElement("div");
+				empty.className = "subtle";
+				empty.textContent = emptyText;
+				container.appendChild(empty);
+				return;
+			}
+			orders.forEach((o) => container.appendChild(renderOrder(o)));
+		};
+
+		// Actions
+		const markAsPaid = async (id) => {
+			if (!id) return;
+			try {
+				await updateDoc(doc(db, "orders", id), { paymentStatus: "paid" });
+			} catch (err) {
+				console.error("Failed to mark paid", err);
+			}
+		};
+
+		const openConfirm = (id) => {
+			pendingCancelId = id;
+			overlay.classList.add("active");
+		};
+
+		const closeConfirm = () => {
+			pendingCancelId = null;
+			overlay.classList.remove("active");
+		};
+
+		confirmNo.addEventListener("click", closeConfirm);
+		overlay.addEventListener("click", (e) => { if (e.target === overlay) closeConfirm(); });
+		confirmYes.addEventListener("click", async () => {
+			if (!pendingCancelId) return;
+			try {
+				await updateDoc(doc(db, "orders", pendingCancelId), { orderStatus: "cancelled" });
+			} catch (err) {
+				console.error("Failed to cancel", err);
+			} finally {
+				closeConfirm();
+			}
+		});
+
+		// Live listener (activated only when authenticated)
+		let unsubscribe = null;
+
+		const startOrdersListener = () => {
+			const ordersRef = collection(db, "orders");
+			const q = query(ordersRef, orderBy("timestamp", "desc"));
+			unsubscribe = onSnapshot(q, (snapshot) => {
+				const pending = [];
+				const ready = [];
+				const cancelled = [];
+
+				snapshot.forEach((docSnap) => {
+					const data = docSnap.data();
+					const order = { ...data, id: docSnap.id };
+					if (order.orderStatus === "cancelled") {
+						cancelled.push(order);
+					} else if (order.orderStatus === "ready") {
+						ready.push(order);
+					} else {
+						pending.push(order);
+					}
+				});
+
+				renderList(pendingList, pending, "No pending orders.");
+				renderList(readyList, ready, "No ready orders.");
+				renderList(cancelledList, cancelled, "No cancelled orders.");
+				lastUpdated.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+			}, (error) => {
+				console.error("orders onSnapshot error", error);
+			});
+		};
+
+		const stopOrdersListener = () => {
+			if (unsubscribe) {
+				unsubscribe();
+				unsubscribe = null;
+			}
+			renderList(pendingList, [], "Sign in to view orders.");
+			renderList(readyList, [], "Sign in to view orders.");
+			renderList(cancelledList, [], "Sign in to view orders.");
+			lastUpdated.textContent = "Updated: —";
+		};
+
+		// Auth helpers
+		const showAuth = (msg = "") => {
+			authError.textContent = msg;
+			authOverlay.classList.add("active");
+		};
+
+		const hideAuth = () => {
+			authOverlay.classList.remove("active");
+			authError.textContent = "";
+			authEmail.value = "";
+			authPassword.value = "";
+		};
+
+		authSignin.addEventListener("click", async () => {
+			const email = (authEmail.value || "").trim();
+			const pass = authPassword.value || "";
+			if (!email || !pass) {
+				authError.textContent = "Enter email and password.";
+				return;
+			}
+			authError.textContent = "";
+			authSignin.disabled = true;
+			try {
+				await signInWithEmailAndPassword(auth, email, pass);
+			} catch (err) {
+				authError.textContent = err?.message || "Sign-in failed.";
+			} finally {
+				authSignin.disabled = false;
+			}
+		});
+
+		logoutBtn.addEventListener("click", async () => {
+			logoutBtn.disabled = true;
+			try {
+				await signOut(auth);
+			} catch (err) {
+				console.error("Logout failed", err);
+			} finally {
+				logoutBtn.disabled = false;
+			}
+		});
+
+		onAuthStateChanged(auth, (user) => {
+			if (user) {
+				hideAuth();
+				logoutBtn.style.display = "inline-flex";
+				startOrdersListener();
+			} else {
+				logoutBtn.style.display = "none";
+				stopOrdersListener();
+				showAuth();
+			}
+		});
+
+		// TODO: add filters by service/payment in future
+	</script>
+</body>
+</html>

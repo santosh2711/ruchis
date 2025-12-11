@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="theme-color" content="#f97316" />
+	<title>RUCHI | Order Status</title>
+	<style>
+		:root {
+			--orange: #f97316;
+			--orange-dark: #ea580c;
+			--black: #0f172a;
+			--border: #e2e8f0;
+			--gray: #f8fafc;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			font-family: "Segoe UI", Tahoma, sans-serif;
+			background: linear-gradient(180deg, #fff7ed 0%, #ffffff 40%);
+			color: var(--black);
+			padding: 16px;
+			min-height: 100vh;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+		}
+
+		header {
+			width: 100%;
+			max-width: 720px;
+			padding: 10px 0 14px;
+			text-align: center;
+		}
+
+		h1 {
+			margin: 0;
+			font-size: 22px;
+			color: var(--orange-dark);
+		}
+
+		.meta {
+			margin-top: 6px;
+			display: flex;
+			justify-content: center;
+			gap: 8px;
+			flex-wrap: wrap;
+			color: #475569;
+			font-weight: 600;
+		}
+
+		.pill {
+			border: 1px solid var(--border);
+			background: #ffffff;
+			border-radius: 999px;
+			padding: 6px 12px;
+		}
+
+		.card {
+			width: 100%;
+			max-width: 720px;
+			background: #ffffff;
+			border: 1px solid var(--border);
+			border-radius: 14px;
+			padding: 18px;
+			box-shadow: 0 8px 28px rgba(0,0,0,0.08);
+			text-align: center;
+		}
+
+		.list {
+			margin-top: 14px;
+			display: grid;
+			gap: 10px;
+		}
+
+		.item-row {
+			display: grid;
+			grid-template-columns: 1fr auto;
+			gap: 8px;
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			padding: 10px 12px;
+			background: #ffffff;
+			text-align: left;
+		}
+
+		.item-meta { color: #475569; font-size: 13px; margin: 2px 0 0; }
+		.total-line { margin-top: 8px; font-weight: 800; display: flex; justify-content: space-between; }
+
+		.status {
+			font-size: 18px;
+			font-weight: 800;
+			color: var(--black);
+			margin: 0 0 8px;
+		}
+
+		.sub {
+			margin: 0 0 14px;
+			color: #475569;
+			line-height: 1.5;
+			font-weight: 600;
+		}
+
+		.animation {
+			width: 180px;
+			height: 180px;
+			margin: 0 auto 12px;
+			position: relative;
+		}
+
+		.pot {
+			position: absolute;
+			inset: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: radial-gradient(circle at 50% 30%, rgba(249,115,22,0.25), transparent 55%), #fff7ed;
+			border-radius: 50%;
+			overflow: hidden;
+			border: 2px solid var(--border);
+		}
+
+		.steam {
+			position: absolute;
+			bottom: 60px;
+			width: 12px;
+			height: 40px;
+			border-radius: 999px;
+			background: linear-gradient(180deg, rgba(249,115,22,0.4), transparent);
+			animation: rise 2.4s ease-in-out infinite;
+		}
+
+		.steam:nth-child(2) { left: 40%; animation-delay: 0.4s; }
+		.steam:nth-child(3) { left: 60%; animation-delay: 0.8s; }
+
+		@keyframes rise {
+			0% { transform: translateY(20px) scale(0.6); opacity: 0; }
+			25% { opacity: 1; }
+			100% { transform: translateY(-30px) scale(1); opacity: 0; }
+		}
+
+		.pan {
+			position: absolute;
+			bottom: 34px;
+			left: 50%;
+			transform: translateX(-50%);
+			width: 120px;
+			height: 30px;
+			background: #0f172a;
+			border-radius: 0 0 16px 16px;
+			box-shadow: 0 12px 24px rgba(0,0,0,0.18);
+		}
+
+		.pan::before {
+			content: "";
+			position: absolute;
+			top: -12px;
+			left: 10px;
+			right: 10px;
+			height: 12px;
+			background: #1f2937;
+			border-radius: 12px 12px 4px 4px;
+		}
+
+		.bubble {
+			position: absolute;
+			background: #fde68a;
+			border-radius: 50%;
+			opacity: 0.9;
+			animation: bubble 1.6s ease-in-out infinite;
+		}
+
+		.bubble:nth-child(1) { width: 12px; height: 12px; left: 35%; bottom: 50px; animation-delay: 0s; }
+		.bubble:nth-child(2) { width: 10px; height: 10px; left: 55%; bottom: 54px; animation-delay: 0.3s; }
+		.bubble:nth-child(3) { width: 8px; height: 8px; left: 45%; bottom: 46px; animation-delay: 0.6s; }
+
+		@keyframes bubble {
+			0% { transform: translateY(0) scale(0.6); opacity: 0.7; }
+			50% { transform: translateY(-8px) scale(1); opacity: 1; }
+			100% { transform: translateY(0) scale(0.6); opacity: 0.2; }
+		}
+
+		.actions {
+			margin-top: 14px;
+			display: flex;
+			gap: 10px;
+			flex-wrap: wrap;
+			justify-content: center;
+		}
+
+		button {
+			border: none;
+			border-radius: 12px;
+			padding: 12px 16px;
+			font-weight: 700;
+			cursor: pointer;
+			transition: background 0.2s ease, transform 0.2s ease;
+		}
+
+		.primary { background: var(--orange); color: #ffffff; }
+		.secondary { background: #ffffff; color: var(--black); border: 1px solid var(--border); }
+		button:active { transform: scale(0.98); }
+
+		.note {
+			margin-top: 12px;
+			color: #475569;
+			font-weight: 600;
+			text-align: center;
+			line-height: 1.4;
+		}
+
+		.ready-wrap {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			margin: 0 auto 10px;
+		}
+
+		.cancel-wrap {
+			display: none;
+			align-items: center;
+			justify-content: center;
+			margin: 0 auto 10px;
+		}
+
+		.cancel-bubble {
+			width: 160px;
+			height: 160px;
+			border-radius: 50%;
+			background: radial-gradient(circle at 30% 30%, #ffe4e6, #fb7185);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			position: relative;
+			box-shadow: 0 12px 28px rgba(251, 113, 133, 0.35);
+			animation: sorryPop 0.6s ease;
+		}
+
+		.cancel-emoji {
+			font-size: 64px;
+			animation: gentle 1.8s ease-in-out infinite;
+		}
+
+		@keyframes gentle {
+			0% { transform: translateY(0); }
+			50% { transform: translateY(-6px); }
+			100% { transform: translateY(0); }
+		}
+
+		@keyframes sorryPop {
+			0% { transform: scale(0.9); opacity: 0; }
+			100% { transform: scale(1); opacity: 1; }
+		}
+
+		.ready-circle {
+			width: 160px;
+			height: 160px;
+			border-radius: 50%;
+			background: radial-gradient(circle at 30% 30%, #d1fae5, #10b981);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			position: relative;
+			box-shadow: 0 12px 28px rgba(16, 185, 129, 0.35);
+			animation: popReady 0.6s ease;
+		}
+
+		.ready-check {
+			width: 64px;
+			height: 32px;
+			border: 10px solid #ffffff;
+			border-top: none;
+			border-right: none;
+			transform: rotate(-45deg);
+			position: relative;
+			animation: draw 0.55s ease forwards;
+		}
+
+		@keyframes draw {
+			0% { width: 0; height: 0; opacity: 0; }
+			40% { width: 0; height: 32px; opacity: 1; }
+			100% { width: 64px; height: 32px; opacity: 1; }
+		}
+
+		@keyframes popReady {
+			0% { transform: scale(0.9); opacity: 0; }
+			100% { transform: scale(1); opacity: 1; }
+		}
+	</style>
+</head>
+<body>
+	<header>
+		<h1>Order Status</h1>
+		<div class="meta">
+			<span class="pill">Table: <span id="table-number">-</span></span>
+			<span class="pill">Service: <span id="service-type">-</span></span>
+			<span class="pill">Order: <span id="order-state-text">In Kitchen</span></span>
+		</div>
+	</header>
+
+	<div class="card">
+		<div id="cook-anim" class="animation">
+			<div class="pot">
+				<div class="steam"></div>
+				<div class="steam"></div>
+				<div class="steam"></div>
+				<div class="pan"></div>
+				<div class="bubble"></div>
+				<div class="bubble"></div>
+				<div class="bubble"></div>
+			</div>
+		</div>
+
+		<div id="ready-anim" class="ready-wrap" style="display:none;">
+			<div class="ready-circle">
+				<div class="ready-check"></div>
+			</div>
+		</div>
+
+		<div id="cancel-anim" class="cancel-wrap">
+			<div class="cancel-bubble">
+				<div class="cancel-emoji" aria-hidden="true">🙏</div>
+			</div>
+		</div>
+
+		<p class="status" id="status-text">Your food is being cooked</p>
+		<p class="sub" id="status-sub">We’re preparing your order with care. It will be ready soon.</p>
+		<div class="note" id="eta">Estimated time: ~12-18 minutes</div>
+		<div class="actions">
+			<button class="secondary" id="back-btn" type="button">Back to menu</button>
+		</div>
+	</div>
+
+		<div class="card" id="items-card" style="margin-top:12px; display:none; text-align:left;">
+			<h3 style="margin:0 0 10px; color: var(--black);">Order items</h3>
+			<div id="items-list" class="list"></div>
+			<div id="items-total" class="total-line"></div>
+		</div>
+
+	<script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+		import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+		const firebaseConfig = {
+			apiKey: "AIzaSyCS1WJJQ7QQnqRhtwuTQCPpjjb3tIjQ3nQ",
+			authDomain: "ruchi-53a14.firebaseapp.com",
+			projectId: "ruchi-53a14",
+			storageBucket: "ruchi-53a14.appspot.com",
+			messagingSenderId: "473906899822",
+			appId: "1:473906899822:web:07640feeca4e379aaa6f7f",
+			measurementId: "G-J1CQDC048C"
+		};
+
+		const app = initializeApp(firebaseConfig);
+		const db = getFirestore(app);
+
+		const params = new URLSearchParams(window.location.search);
+		const table = params.get("table") || "1";
+		const serviceRaw = params.get("service") || "-";
+		const service = serviceRaw;
+		const orderId = params.get("orderId") || "";
+		const cartKey = `cart_table${table}`;
+
+		document.getElementById("table-number").textContent = table;
+		document.getElementById("service-type").textContent = service.replace(/-/g, " ") || "-";
+
+		const backBtn = document.getElementById("back-btn");
+		const itemsCard = document.getElementById("items-card");
+		const itemsList = document.getElementById("items-list");
+		const itemsTotal = document.getElementById("items-total");
+		const cookAnim = document.getElementById("cook-anim");
+		const readyAnim = document.getElementById("ready-anim");
+		const cancelAnim = document.getElementById("cancel-anim");
+		const statusText = document.getElementById("status-text");
+		const statusSub = document.getElementById("status-sub");
+		const etaEl = document.getElementById("eta");
+		const orderStateText = document.getElementById("order-state-text");
+
+		const formatPrice = (v) => `RM ${Number(v || 0).toFixed(2)}`;
+
+		const loadCart = () => {
+			try {
+				const stored = localStorage.getItem(cartKey);
+				return stored ? JSON.parse(stored) : [];
+			} catch (e) {
+				return [];
+			}
+		};
+
+		const renderItems = () => {
+			const cart = loadCart();
+			if (!cart.length) {
+				itemsCard.style.display = "none";
+				return;
+			}
+
+			itemsCard.style.display = "block";
+			itemsList.innerHTML = "";
+			let total = 0;
+
+			cart.forEach((item) => {
+				const qty = item.qty || 0;
+				const price = Number(item.price) || 0;
+				const lineTotal = qty * price;
+				total += lineTotal;
+
+				const row = document.createElement("div");
+				row.className = "item-row";
+
+				const left = document.createElement("div");
+				const title = document.createElement("div");
+				title.textContent = item.name || "Item";
+				const meta = document.createElement("div");
+				meta.className = "item-meta";
+				meta.textContent = `${qty} x ${formatPrice(price)}`;
+				left.appendChild(title);
+				left.appendChild(meta);
+
+				const right = document.createElement("div");
+				right.style.fontWeight = "800";
+				right.textContent = formatPrice(lineTotal);
+
+				row.appendChild(left);
+				row.appendChild(right);
+				itemsList.appendChild(row);
+			});
+
+			itemsTotal.textContent = "";
+			itemsTotal.appendChild(document.createTextNode("Total"));
+			const totalVal = document.createElement("span");
+			totalVal.textContent = formatPrice(total);
+			totalVal.style.float = "right";
+			itemsTotal.appendChild(totalVal);
+		};
+
+		const setReadyState = () => {
+			const serviceNormalized = (service || "").toLowerCase();
+			const isPickup = serviceNormalized.includes("pickup") || serviceNormalized.includes("pick up");
+			const isTakeaway = serviceNormalized.includes("takeaway") || serviceNormalized.includes("take away");
+
+			if (cookAnim) cookAnim.style.display = "none";
+			if (readyAnim) readyAnim.style.display = "flex";
+			if (cancelAnim) cancelAnim.style.display = "none";
+			if (isPickup) {
+				statusText.textContent = "Your order is ready for pickup";
+				statusSub.textContent = "Please collect your order at the counter.";
+				etaEl.textContent = "Thanks for waiting! We'll hand it to you at pickup.";
+			} else if (isTakeaway) {
+				statusText.textContent = "Your takeaway is ready";
+				statusSub.textContent = "Your packed order is ready to go.";
+				etaEl.textContent = "Thanks for waiting! Collect it at the counter.";
+			} else {
+				statusText.textContent = "Your food is ready";
+				statusSub.textContent = "Order is arriving soon to your table.";
+				etaEl.textContent = "Thanks for waiting! Our server is bringing it out.";
+			}
+			if (orderStateText) orderStateText.textContent = "Ready";
+		};
+
+		const setCookingState = () => {
+			if (cookAnim) cookAnim.style.display = "block";
+			if (readyAnim) readyAnim.style.display = "none";
+			if (cancelAnim) cancelAnim.style.display = "none";
+			statusText.textContent = "Your food is being cooked";
+			statusSub.textContent = "We’re preparing your order with care. It will be ready soon.";
+			etaEl.textContent = "Estimated time: ~12-18 minutes";
+			if (orderStateText) orderStateText.textContent = "In Kitchen";
+		};
+
+		const setCancelledState = () => {
+			if (cookAnim) cookAnim.style.display = "none";
+			if (readyAnim) readyAnim.style.display = "none";
+			if (cancelAnim) cancelAnim.style.display = "flex";
+			statusText.textContent = "Order cancelled";
+			statusSub.textContent = "Sorry for the inconvinience the options u chose were unavailable at the current moment.";
+			etaEl.textContent = "Please place a new order or check with our staff.";
+			if (orderStateText) orderStateText.textContent = "Cancelled";
+		};
+
+		if (orderId) {
+			const orderRef = doc(db, "orders", orderId);
+			onSnapshot(orderRef, (snap) => {
+				if (!snap.exists()) return;
+				const data = snap.data();
+				if (data.orderStatus === "cancelled") {
+					setCancelledState();
+				} else if (data.orderStatus === "ready") {
+					setReadyState();
+				} else {
+					setCookingState();
+				}
+			});
+		}
+
+		backBtn.addEventListener("click", () => {
+			const qs = new URLSearchParams({ table, service });
+			window.location.href = `menu.html?${qs.toString()}`;
+		});
+
+		renderItems();
+	</script>
+</body>
+</html>
