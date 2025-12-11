@@ -142,7 +142,7 @@
 
 		.category-nav {
 			position: sticky;
-			top: 76px;
+			top: 128px;
 			z-index: 120;
 			background: #ffffff;
 			padding: 8px 0 6px;
@@ -159,7 +159,12 @@
 		}
 
 		.search-bar {
-			margin: 8px 0 12px;
+			position: sticky;
+			top: 76px;
+			z-index: 115;
+			background: #ffffff;
+			padding: 8px 0;
+			margin: 0 0 10px;
 			display: flex;
 			gap: 8px;
 			align-items: center;
@@ -372,10 +377,10 @@
 		}
 
 		.checkout-btn {
-			margin-top: 10px;
+			margin: 12px 16px 18px;
 			width: calc(100% - 32px);
 			align-self: center;
-			padding: 12px 16px;
+			padding: 14px 18px;
 			background: var(--orange);
 			color: #ffffff;
 			border: none;
@@ -520,7 +525,9 @@
 		}
 
 		.non-veg {
-			background: #ef4444;
+			background: #ffffff;
+			border: 2px solid #f97316;
+			box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.18);
 		}
 
 		.filter-btn {
@@ -586,6 +593,21 @@
 
 		.add-btn:hover {
 			background: var(--orange-dark);
+		}
+
+		@media (max-width: 767px) {
+			.cart-button {
+				position: fixed;
+				bottom: 18px;
+				right: 16px;
+				z-index: 210;
+				padding: 12px 14px;
+				box-shadow: 0 10px 26px rgba(0, 0, 0, 0.16);
+				border-radius: 999px;
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+			}
 		}
 
 		.empty {
@@ -1079,6 +1101,7 @@
 						if (btn && entry.isIntersecting) {
 							categoryNavInner.querySelectorAll(".category-pill-btn").forEach((b) => b.classList.remove("active"));
 							btn.classList.add("active");
+							btn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
 						}
 					});
 				}, { root: null, rootMargin: "-90px 0px -60% 0px", threshold: [0, 0.25, 0.5] });
