@@ -236,7 +236,6 @@
 <body>
 	<header>
 		<h1>Order Summary</h1>
-		<button class="secondary" id="header-back" type="button" style="margin-top:10px;">Back to menu</button>
 		<div class="meta">
 			<span class="pill">Table: <span id="table-number">-</span></span>
 			<span class="pill">Service: <span id="service-type">-</span></span>
@@ -283,7 +282,6 @@
 		const serviceEl = document.getElementById("service-type");
 		const itemCountEl = document.getElementById("item-count");
 		const contentEl = document.getElementById("content");
-		const headerBackBtn = document.getElementById("header-back");
 		const deleteModal = document.getElementById("delete-modal");
 		const deleteConfirmBtn = document.getElementById("delete-confirm");
 		const deleteCancelBtn = document.getElementById("delete-cancel");
@@ -482,11 +480,6 @@
 			contentEl.appendChild(totals);
 			contentEl.appendChild(actions);
 		};
-
-		headerBackBtn?.addEventListener("click", () => {
-			const params = new URLSearchParams({ table, service });
-			window.location.href = `menu.html?${params.toString()}`;
-		});
 
 		deleteCancelBtn?.addEventListener("click", () => {
 			pendingDeleteUid = null;
