@@ -52,6 +52,7 @@
 			font-weight: 700;
 			letter-spacing: 0.5px;
 			color: var(--orange-dark);
+			white-space: nowrap;
 		}
 
 		.header-right {
@@ -88,6 +89,10 @@
 			justify-content: center;
 			font-weight: 800;
 			font-size: 13px;
+		}
+
+		.profile-name {
+			display: none;
 		}
 
 		.profile-dropdown {
@@ -644,7 +649,6 @@
 			<div class="pill" id="table-pill">Table: <span id="table-number">-</span></div>
 			<button class="pill profile-btn" id="profile-btn" type="button">
 				<span class="profile-circle" id="profile-circle">A</span>
-				<span id="profile-name">Account</span>
 			</button>
 			<button class="pill cart-pill cart-button" id="cart-button" type="button" aria-label="Cart items">
 				🛒 <span id="cart-count">0</span>
