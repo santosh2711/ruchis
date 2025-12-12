@@ -304,6 +304,11 @@
 		const authError = document.getElementById("auth-error");
 		const logoutBtn = document.getElementById("logout-btn");
 
+		// Restrict access to a single authorized account
+		const allowedEmail = "shubhakumarvel@gmail.com"; // TODO: replace with the real cashier email
+		authEmail.value = allowedEmail;
+		authEmail.readOnly = true;
+
 		let pendingCancelId = null;
 
 		const formatCurrency = (v) => `RM ${Number(v || 0).toFixed(2)}`;
@@ -542,6 +547,10 @@
 				authError.textContent = "Enter email and password.";
 				return;
 			}
+			if (email.toLowerCase() !== allowedEmail.toLowerCase()) {
+				authError.textContent = "This account is not authorized.";
+				return;
+			}
 			authError.textContent = "";
 			authSignin.disabled = true;
 			try {
@@ -566,6 +575,14 @@
 
 		onAuthStateChanged(auth, (user) => {
 			if (user) {
+				const email = (user.email || "").toLowerCase();
+				if (email !== allowedEmail.toLowerCase()) {
+					signOut(auth).catch(() => {});
+					logoutBtn.style.display = "none";
+					stopOrdersListener();
+					showAuth("This account is not authorized.");
+					return;
+				}
 				hideAuth();
 				logoutBtn.style.display = "inline-flex";
 				startOrdersListener();
