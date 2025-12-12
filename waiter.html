@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="theme-color" content="#f97316" />
+	<title>RUCHI | Waiter</title>
+	<style>
+		:root {
+			--orange: #f97316;
+			--orange-dark: #ea580c;
+			--black: #0f172a;
+			--gray: #f8fafc;
+			--border: #e2e8f0;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			font-family: "Segoe UI", Tahoma, sans-serif;
+			background: #ffffff;
+			color: var(--black);
+			padding-top: 78px;
+			padding-bottom: 140px;
+			-webkit-font-smoothing: antialiased;
+		}
+
+		header {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 78px;
+			background: #ffffff;
+			border-bottom: 1px solid var(--border);
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 0 16px;
+			z-index: 100;
+			box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+		}
+
+		.brand { font-size: 20px; font-weight: 800; color: var(--orange-dark); letter-spacing: 0.4px; }
+		.sub { margin: 4px 0 0; color: #475569; font-weight: 600; font-size: 13px; }
+
+		.table-box {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			padding: 8px 12px;
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			background: var(--gray);
+		}
+		.table-box label { font-weight: 700; color: #475569; font-size: 13px; }
+		.table-box input {
+			width: 80px;
+			border: none;
+			background: transparent;
+			font-weight: 800;
+			font-size: 16px;
+			outline: none;
+			color: var(--black);
+		}
+
+		main { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+
+		.quick-row { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0 6px; margin-bottom: 4px; }
+		.search-row {
+			display: flex;
+			gap: 8px;
+			align-items: center;
+			margin: 6px 0 10px;
+		}
+		.search-input {
+			flex: 1;
+			padding: 10px 12px;
+			border: 1px solid var(--border);
+			border-radius: 10px;
+			font-weight: 700;
+			font-size: 14px;
+		}
+		.search-btn {
+			border: none;
+			border-radius: 10px;
+			padding: 10px 14px;
+			font-weight: 800;
+			background: var(--orange);
+			color: #fff;
+			cursor: pointer;
+		}
+		.search-btn:active { transform: scale(0.985); }
+		.quick-btn {
+			border: 1px solid var(--border);
+			background: #fff;
+			color: var(--black);
+			padding: 8px 10px;
+			border-radius: 10px;
+			font-weight: 700;
+			cursor: pointer;
+			white-space: nowrap;
+			transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+		}
+		button { touch-action: manipulation; }
+		.quick-btn:hover { border-color: var(--orange); color: var(--orange-dark); }
+		.quick-btn.active { border-color: var(--orange); background: #fff7ed; color: var(--orange-dark); }
+
+		.section-label { margin: 12px 0 6px; font-weight: 800; color: var(--black); }
+
+		.categories {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 10px;
+			margin: 6px 0 10px;
+		}
+		.cat-btn {
+			border: 1px solid var(--border);
+			background: #fff7ed;
+			color: var(--orange-dark);
+			padding: 18px 10px;
+			border-radius: 12px;
+			font-weight: 900;
+			font-size: 15px;
+			cursor: pointer;
+			box-shadow: 0 8px 18px rgba(0,0,0,0.05);
+		}
+		.cat-btn.active { border-color: var(--orange); background: #fff; box-shadow: 0 10px 20px rgba(0,0,0,0.07); }
+		.cat-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+		.items-panel { padding: 6px 0 18px; display: grid; gap: 10px; }
+		.menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+
+		.card {
+			border: 1px solid var(--border);
+			border-radius: 14px;
+			padding: 12px;
+			background: #ffffff;
+			box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+			display: grid;
+			gap: 8px;
+		}
+		.card h3 { margin: 0; font-size: 16px; font-weight: 800; color: var(--black); }
+		.card .meta { margin: 0; color: #475569; font-weight: 600; font-size: 13px; }
+		.card .price { font-weight: 800; color: var(--orange-dark); }
+
+		.controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+		.qty-controls { display: inline-flex; align-items: center; gap: 10px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--gray); }
+		.qty-btn { width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--orange); color: #fff; font-weight: 800; cursor: pointer; }
+		.qty-val { min-width: 24px; text-align: center; font-weight: 800; }
+		.add-btn { flex: 1; border: 1px dashed var(--border); background: #fff7ed; color: var(--orange-dark); padding: 10px 12px; border-radius: 10px; font-weight: 800; cursor: pointer; }
+
+		.cart-sheet {
+			position: fixed;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: #ffffff;
+			border-top: 1px solid var(--border);
+			box-shadow: 0 -10px 26px rgba(0,0,0,0.12);
+			border-radius: 16px 16px 0 0;
+			padding: 12px 14px 16px;
+			max-height: 64vh;
+			display: grid;
+			gap: 10px;
+		}
+		.cart-header { display: flex; align-items: center; justify-content: space-between; }
+		.cart-header h4 { margin: 0; font-size: 16px; }
+		.cart-count { color: #475569; font-weight: 700; }
+		.edit-badge {
+			background: #e0f2fe;
+			color: #075985;
+			border-radius: 999px;
+			padding: 6px 10px;
+			font-weight: 800;
+			font-size: 12px;
+			white-space: nowrap;
+		}
+
+		.cart-list { overflow-y: auto; max-height: 32vh; display: grid; gap: 8px; }
+		.cart-row { display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; }
+		.cart-row h5 { margin: 0; font-size: 14px; }
+		.cart-meta { color: #475569; font-size: 12px; font-weight: 700; }
+		.cart-qty { display: inline-flex; align-items: center; gap: 6px; }
+		.cart-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--orange); color: #fff; font-weight: 800; cursor: pointer; }
+
+		.total-row { display: flex; align-items: center; justify-content: space-between; font-weight: 800; }
+		.send-btn { width: 100%; padding: 14px 16px; border: none; border-radius: 12px; background: var(--orange); color: #fff; font-weight: 900; cursor: pointer; }
+		.send-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+		.note-input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-weight: 700; }
+
+		.toast { position: fixed; right: 14px; bottom: 140px; background: #0f172a; color: #fff; padding: 10px 12px; border-radius: 10px; display: none; font-weight: 800; box-shadow: 0 14px 30px rgba(0,0,0,0.2); }
+		.toast.show { display: block; }
+
+		.empty { color: #475569; font-weight: 700; text-align: center; padding: 20px 0; }
+
+		@media (min-width: 720px) {
+			.menu-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+			.cart-sheet { left: 50%; right: 50%; width: min(520px, 96vw); transform: translateX(-50%); }
+		}
+
+		@media (max-width: 640px) {
+			body { padding-top: 70px; padding-bottom: 120px; }
+			header { height: 70px; padding: 0 12px; }
+			.quick-row { padding: 8px 0 4px; gap: 6px; }
+			.search-row { margin: 4px 0 8px; gap: 6px; }
+			.search-input { padding: 9px 10px; font-size: 13px; }
+			.search-btn { padding: 10px 12px; }
+			.categories { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+			.menu-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+			.card { padding: 10px; }
+			.cart-sheet { max-height: 70vh; padding: 10px 12px 14px; }
+			.cart-list { max-height: 36vh; }
+			.btn, .send-btn, .search-btn { font-size: 14px; }
+		}
+	</style>
+</head>
+<body>
+	<header>
+		<div>
+			<div class="brand">RUCHI Waiter</div>
+			<p class="sub">Select table • add items • send</p>
+		</div>
+		<div class="table-box">
+			<label for="table-input">Table</label>
+			<input id="table-input" type="text" inputmode="numeric" placeholder="1" />
+		</div>
+	</header>
+
+	<main>
+		<div class="quick-row" id="quick-row"></div>
+		<div class="search-row">
+			<input id="search-input" class="search-input" type="search" placeholder="Search items" />
+			<button id="search-btn" class="search-btn" type="button">Search</button>
+		</div>
+		<h3 class="section-label">Categories</h3>
+		<section class="categories" id="categories"></section>
+		<div class="items-panel" id="items-panel"></div>
+	</main>
+
+	<section class="cart-sheet">
+		<div class="cart-header">
+			<h4>Cart to counter</h4>
+			<div class="cart-count" id="cart-count">0 items</div>
+			<span class="edit-badge" id="editing-badge" style="display:none;">Editing order</span>
+		</div>
+		<input id="order-note" class="note-input" placeholder="Order note (optional)" />
+		<div class="cart-list" id="cart-list"></div>
+		<div class="total-row">
+			<span>Total</span>
+			<span id="total">RM 0.00</span>
+		</div>
+		<button id="send" class="send-btn" type="button">Send to counter</button>
+	</section>
+
+	<div class="toast" id="toast"></div>
+
+	<script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+		import { getFirestore, collection, getDocs, addDoc, updateDoc, getDoc, serverTimestamp, query, where, orderBy, limit, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+		const firebaseConfig = {
+			apiKey: "AIzaSyCS1WJJQ7QQnqRhtwuTQCPpjjb3tIjQ3nQ",
+			authDomain: "ruchi-53a14.firebaseapp.com",
+			projectId: "ruchi-53a14",
+			storageBucket: "ruchi-53a14.firebasestorage.app",
+			messagingSenderId: "473906899822",
+			appId: "1:473906899822:web:07640feeca4e379aaa6f7f",
+			measurementId: "G-J1CQDC048C"
+		};
+
+		const app = initializeApp(firebaseConfig);
+		const db = getFirestore(app);
+
+		const categoriesEl = document.getElementById("categories");
+		const itemsPanel = document.getElementById("items-panel");
+		const tableInput = document.getElementById("table-input");
+		const quickRow = document.getElementById("quick-row");
+		const cartList = document.getElementById("cart-list");
+		const cartCount = document.getElementById("cart-count");
+		const totalEl = document.getElementById("total");
+		const sendBtn = document.getElementById("send");
+		const orderNote = document.getElementById("order-note");
+		const toast = document.getElementById("toast");
+		const editingBadge = document.getElementById("editing-badge");
+		const searchInput = document.getElementById("search-input");
+		const searchBtn = document.getElementById("search-btn");
+
+		let menuItems = [];
+		let cart = [];
+		let currentTable = new URLSearchParams(window.location.search).get("table") || "";
+		let selectedCategory = "";
+		let activeOrderId = null;
+		let activeOrderStatus = "unpaid";
+		let activeOrderUnsub = null;
+		let searchTerm = "";
+
+		const CART_KEY = (table) => `waiter_cart_table_${table || "default"}`;
+		const currency = (v) => `RM ${(Number(v) || 0).toFixed(2)}`;
+
+		const showToast = (msg) => {
+			toast.textContent = msg;
+			toast.classList.add("show");
+			setTimeout(() => toast.classList.remove("show"), 2000);
+		};
+
+		const setEditingBadge = (text) => {
+			if (!editingBadge) return;
+			if (text) {
+				editingBadge.textContent = text;
+				editingBadge.style.display = "inline-flex";
+			} else {
+				editingBadge.style.display = "none";
+			}
+		};
+
+		const stopActiveOrderListener = () => {
+			if (activeOrderUnsub) {
+				activeOrderUnsub();
+				activeOrderUnsub = null;
+			}
+		};
+
+		const loadCart = (table) => {
+			try {
+				const raw = localStorage.getItem(CART_KEY(table));
+				return raw ? JSON.parse(raw) : [];
+			} catch (e) {
+				return [];
+			}
+		};
+
+		const saveCart = (table, value) => {
+			localStorage.setItem(CART_KEY(table), JSON.stringify(value));
+		};
+
+		const setTable = async (val) => {
+			currentTable = (val || "").trim();
+			tableInput.value = currentTable;
+			activeOrderId = null;
+			activeOrderStatus = "unpaid";
+			stopActiveOrderListener();
+			setEditingBadge("");
+			searchTerm = "";
+			if (searchInput) searchInput.value = "";
+			cart = loadCart(currentTable);
+			renderCart();
+			renderCategories();
+			renderItems();
+			quickRow.querySelectorAll(".quick-btn").forEach((btn) => {
+				btn.classList.toggle("active", btn.textContent === currentTable);
+			});
+			await loadExistingOrder(currentTable);
+		};
+
+		["1","2","3","4","5","6","7","8","9","10","T1","T2","T3"].forEach((t) => {
+			const btn = document.createElement("button");
+			btn.className = "quick-btn";
+			btn.textContent = t;
+			btn.addEventListener("click", () => setTable(t));
+			quickRow.appendChild(btn);
+		});
+
+		tableInput.addEventListener("change", (e) => setTable(e.target.value));
+
+		const uniqueCategories = () => {
+			const set = new Set();
+			menuItems.forEach((i) => { if (i.category) set.add(i.category); });
+			return Array.from(set).sort();
+		};
+
+		const renderCategories = () => {
+			categoriesEl.innerHTML = "";
+			const cats = uniqueCategories();
+			if (!cats.length) {
+				const empty = document.createElement("div");
+				empty.className = "empty";
+				empty.textContent = "No categories";
+				categoriesEl.appendChild(empty);
+				return;
+			}
+			cats.forEach((cat, idx) => {
+				const btn = document.createElement("button");
+				btn.className = "cat-btn";
+				btn.textContent = cat || "Category";
+				btn.disabled = !currentTable;
+				btn.classList.toggle("active", cat === selectedCategory);
+				btn.addEventListener("click", () => {
+					selectedCategory = cat;
+					renderCategories();
+					renderItems();
+				});
+				categoriesEl.appendChild(btn);
+				if (!selectedCategory && idx === 0) selectedCategory = cat;
+			});
+			if (selectedCategory && !cats.includes(selectedCategory)) {
+				selectedCategory = cats[0];
+				renderCategories();
+			}
+		};
+
+		const renderItems = () => {
+			itemsPanel.innerHTML = "";
+			if (!currentTable) {
+				const lock = document.createElement("div");
+				lock.className = "empty";
+				lock.textContent = "Select a table to start";
+				itemsPanel.appendChild(lock);
+				return;
+			}
+			const list = menuItems.filter((i) => {
+				const matchesCategory = (i.category || "") === selectedCategory;
+				const matchesSearch = !searchTerm || (i.name || "").toLowerCase().includes(searchTerm);
+				return matchesCategory && matchesSearch;
+			});
+			if (!list.length) {
+				const empty = document.createElement("div");
+				empty.className = "empty";
+				empty.textContent = searchTerm ? "No items match your search" : "No items in this category";
+				itemsPanel.appendChild(empty);
+				return;
+			}
+			const grid = document.createElement("section");
+			grid.className = "menu-grid";
+			list.forEach((item) => {
+				const card = document.createElement("article");
+				card.className = "card";
+				card.tabIndex = 0;
+				const title = document.createElement("h3");
+				title.textContent = item.name || "Item";
+				const price = document.createElement("div");
+				price.className = "price";
+				price.textContent = currency(item.price);
+
+				card.addEventListener("click", () => updateCart(item, 1));
+				card.addEventListener("keypress", (e) => { if (e.key === "Enter" || e.key === " ") updateCart(item, 1); });
+
+				const controls = document.createElement("div");
+				controls.className = "controls";
+				const existing = cart.find((c) => c.id === item.id);
+				if (existing) {
+					const wrap = document.createElement("div");
+					wrap.className = "qty-controls";
+					const dec = document.createElement("button");
+					dec.className = "qty-btn";
+					dec.textContent = "-";
+					dec.addEventListener("click", (e) => { e.stopPropagation(); updateCart(item, -1); });
+					const val = document.createElement("div");
+					val.className = "qty-val";
+					val.textContent = existing.qty;
+					const inc = document.createElement("button");
+					inc.className = "qty-btn";
+					inc.textContent = "+";
+					inc.addEventListener("click", (e) => { e.stopPropagation(); updateCart(item, 1); });
+					wrap.append(dec, val, inc);
+					controls.appendChild(wrap);
+				} else {
+					const add = document.createElement("button");
+					add.className = "add-btn";
+					add.textContent = "Add";
+					add.addEventListener("click", (e) => { e.stopPropagation(); updateCart(item, 1); });
+					controls.appendChild(add);
+				}
+				card.append(title, price, controls);
+				grid.appendChild(card);
+			});
+			itemsPanel.appendChild(grid);
+		};
+
+		const updateCart = (item, delta) => {
+			const existing = cart.find((c) => c.id === item.id);
+			if (existing) {
+				existing.qty += delta;
+				if (existing.qty <= 0) cart = cart.filter((c) => c.id !== item.id);
+			} else if (delta > 0) {
+				cart.push({ id: item.id, name: item.name || "Item", price: Number(item.price) || 0, qty: 1, category: item.category || "", prep: item.prep || "kitchen" });
+			}
+			saveCart(currentTable, cart);
+			renderItems();
+			renderCart();
+		};
+
+		const renderCart = () => {
+			const cartSheet = document.querySelector(".cart-sheet");
+			cartList.innerHTML = "";
+			const hasTable = !!currentTable;
+			const hasItems = cart.length > 0;
+			cartSheet.style.display = hasTable && hasItems ? "grid" : "none";
+			cartCount.textContent = `${cart.length || 0} items`;
+			const total = cart.reduce((sum, i) => sum + (i.price || 0) * (i.qty || 0), 0);
+			totalEl.textContent = currency(total);
+			if (!hasItems) {
+				const empty = document.createElement("div");
+				empty.className = "empty";
+				empty.textContent = hasTable ? "Cart is empty" : "Select a table to start";
+				cartList.appendChild(empty);
+				sendBtn.disabled = true;
+				sendBtn.textContent = activeOrderId ? "Update order" : "Send to counter";
+				return;
+			}
+			sendBtn.disabled = activeOrderStatus === "paid";
+			sendBtn.textContent = activeOrderId ? "Update order" : "Send to counter";
+			const frag = document.createDocumentFragment();
+			cart.forEach((item) => {
+				const row = document.createElement("div");
+				row.className = "cart-row";
+				const left = document.createElement("div");
+				const title = document.createElement("h5");
+				title.textContent = item.name;
+				const meta = document.createElement("div");
+				meta.className = "cart-meta";
+				meta.textContent = item.category || "";
+				left.append(title, meta);
+
+				const qty = document.createElement("div");
+				qty.className = "cart-qty";
+				const dec = document.createElement("button");
+				dec.className = "cart-btn";
+				dec.textContent = "-";
+				dec.addEventListener("click", () => updateCart(item, -1));
+				const val = document.createElement("div");
+				val.textContent = item.qty;
+				const inc = document.createElement("button");
+				inc.className = "cart-btn";
+				inc.textContent = "+";
+				inc.addEventListener("click", () => updateCart(item, 1));
+				qty.append(dec, val, inc);
+
+				row.append(left, qty);
+				frag.appendChild(row);
+			});
+			cartList.appendChild(frag);
+		};
+
+		const fetchMenu = async () => {
+			try {
+				const snap = await getDocs(collection(db, "menuItems"));
+				menuItems = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+				renderCategories();
+				renderItems();
+			} catch (err) {
+				itemsPanel.innerHTML = "<div class=\"empty\">Menu unavailable</div>";
+				console.error("Menu load failed", err);
+			}
+		};
+
+		const loadExistingOrder = async (table) => {
+			if (!table) return;
+			try {
+				const q = query(
+					collection(db, "orders"),
+					where("tableNumber", "==", table),
+					where("handledBy", "==", "waiter"),
+					orderBy("createdAt", "desc"),
+					limit(1)
+				);
+				const snap = await getDocs(q);
+				const docSnap = snap.docs[0];
+				if (!docSnap) return;
+				const data = docSnap.data();
+				const payment = (data.paymentStatus || "unpaid").toLowerCase();
+				const orderState = (data.orderStatus || "").toLowerCase();
+				if (payment === "paid" || orderState === "cancelled") return;
+				activeOrderId = docSnap.id;
+				activeOrderStatus = payment;
+				setEditingBadge(`Editing order ${docSnap.id.slice(0, 6)}…`);
+				orderNote.value = data.notes || "";
+				cart = (data.items || []).map((i, idx) => ({
+					id: i.id || `item-${idx}`,
+					name: i.name || "Item",
+					price: Number(i.price) || 0,
+					qty: i.qty || 1,
+					category: i.category || "",
+					prep: i.prep || "kitchen"
+				}));
+				saveCart(table, cart);
+				renderItems();
+				renderCart();
+				stopActiveOrderListener();
+				activeOrderUnsub = onSnapshot(doc(db, "orders", docSnap.id), (liveSnap) => {
+					const live = liveSnap.data() || {};
+					const status = (live.paymentStatus || "").toLowerCase();
+					const state = (live.orderStatus || "").toLowerCase();
+					if (status === "paid" || state === "cancelled") {
+						activeOrderStatus = status || "paid";
+						activeOrderId = null;
+						setEditingBadge("");
+						cart = [];
+						saveCart(table, cart);
+						orderNote.value = "";
+						renderItems();
+						renderCart();
+						stopActiveOrderListener();
+					}
+				});
+			} catch (err) {
+				console.error("Failed to load existing order", err);
+			}
+		};
+
+		const applySearch = () => {
+			searchTerm = (searchInput?.value || "").trim().toLowerCase();
+			renderItems();
+		};
+
+		searchBtn?.addEventListener("click", applySearch);
+		searchInput?.addEventListener("keypress", (e) => {
+			if (e.key === "Enter") applySearch();
+		});
+
+		sendBtn.addEventListener("click", async () => {
+			const table = (tableInput.value || "").trim();
+			if (!table) { showToast("Pick a table first"); return; }
+			if (!cart.length) return;
+			sendBtn.disabled = true;
+			sendBtn.textContent = activeOrderId ? "Updating..." : "Sending...";
+			try {
+				const items = cart.map((i, idx) => ({ id: i.id || `item-${idx}`, name: i.name, qty: i.qty, price: i.price, prep: i.prep, category: i.category || "", note: "" }));
+				const totalPrice = cart.reduce((sum, i) => sum + (i.price || 0) * (i.qty || 0), 0);
+				const payload = {
+					tableNumber: table,
+					handledBy: "waiter",
+					service: "dine-in",
+					items,
+					notes: (orderNote.value || "").trim(),
+					totalPrice,
+					paymentStatus: "unpaid",
+					sentToKitchen: false
+				};
+
+				if (activeOrderId) {
+					const latestSnap = await getDoc(doc(db, "orders", activeOrderId));
+					const latest = latestSnap.data() || {};
+					const latestStatus = (latest.paymentStatus || "unpaid").toLowerCase();
+					if (latestStatus === "paid") {
+						activeOrderStatus = "paid";
+						setEditingBadge("");
+						renderCart();
+						showToast("Order already paid");
+						sendBtn.disabled = true;
+						sendBtn.textContent = "Update order";
+						return;
+					}
+					await updateDoc(doc(db, "orders", activeOrderId), payload);
+					showToast("Order updated");
+					setEditingBadge(`Editing order ${activeOrderId.slice(0, 6)}…`);
+				} else {
+					const docRef = await addDoc(collection(db, "orders"), { ...payload, createdAt: serverTimestamp(), orderId: "" });
+					await updateDoc(docRef, { orderId: docRef.id });
+					activeOrderId = docRef.id;
+					activeOrderStatus = "unpaid";
+					setEditingBadge(`Editing order ${docRef.id.slice(0, 6)}…`);
+					stopActiveOrderListener();
+					activeOrderUnsub = onSnapshot(doc(db, "orders", docRef.id), (liveSnap) => {
+						const live = liveSnap.data() || {};
+						const status = (live.paymentStatus || "").toLowerCase();
+						const state = (live.orderStatus || "").toLowerCase();
+						if (status === "paid" || state === "cancelled") {
+							activeOrderStatus = status || "paid";
+							activeOrderId = null;
+							setEditingBadge("");
+							cart = [];
+							saveCart(table, cart);
+							orderNote.value = "";
+							renderItems();
+							renderCart();
+							stopActiveOrderListener();
+						}
+					});
+					showToast("Sent to counter");
+				}
+
+				saveCart(table, cart);
+				renderItems();
+				renderCart();
+			} catch (err) {
+				console.error("Send failed", err);
+				showToast("Could not send order");
+			} finally {
+				sendBtn.disabled = activeOrderStatus === "paid";
+				sendBtn.textContent = activeOrderId ? "Update order" : "Send to counter";
+			}
+		});
+
+		setTable(currentTable || "1");
+		fetchMenu();
+	</script>
+</body>
+</html>
