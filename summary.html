@@ -258,7 +258,7 @@
 
 	<script type="module">
 		import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-		import { getFirestore, addDoc, collection, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+		import { getFirestore, addDoc, collection, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 		const firebaseConfig = {
 			apiKey: "AIzaSyCS1WJJQ7QQnqRhtwuTQCPpjjb3tIjQ3nQ",
@@ -445,19 +445,23 @@
 					const items = cart.map((item) => ({
 						name: item.name || "Item",
 						qty: item.qty || 1,
+						price: Number(item.price) || 0,
 						prep: "kitchen",
 						note: item.note || ""
 					}));
 					const totalPrice = cart.reduce((sum, i) => sum + (Number(i.price) || 0) * (i.qty || 0), 0);
 					const docRef = await addDoc(collection(db, "orders"), {
 						table,
+						tableNumber: table,
+						handledBy: "self",
 						service,
 						items,
 						notes: "",
 						totalPrice,
 						paymentStatus: "unpaid",
+						sentToKitchen: true,
+						createdAt: serverTimestamp(),
 						orderStatus: "in-kitchen",
-						timestamp: Date.now(),
 						orderId: "" // set after creation for doc id
 					});
 					await updateDoc(docRef, { orderId: docRef.id });
