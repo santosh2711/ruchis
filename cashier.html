@@ -227,32 +227,10 @@
 
 	<main>
 		<section class="section">
-			<h2>Pending Orders</h2>
-			<div id="pending-list" class="orders"></div>
-		</section>
-
-		<section class="section">
-			<h2>Ready Orders</h2>
-			<div id="ready-list" class="orders"></div>
-		</section>
-
-		<section class="section">
-			<h2>Cancelled Orders</h2>
-			<div id="cancelled-list" class="orders"></div>
+			<h2>Orders</h2>
+			<div id="orders-list" class="orders"></div>
 		</section>
 	</main>
-
-	<!-- Cancel confirmation modal -->
-	<div class="modal-overlay" id="confirm-overlay">
-		<div class="modal">
-			<h3>Cancel this order?</h3>
-			<p>Are you sure you want to cancel this order?</p>
-			<div class="modal-actions">
-				<button class="btn cancel" id="confirm-yes" type="button">Yes, Cancel</button>
-				<button class="btn" id="confirm-no" type="button">No</button>
-			</div>
-		</div>
-	</div>
 
 	<!-- Auth overlay -->
 	<div class="auth-overlay" id="auth-overlay">
@@ -290,13 +268,8 @@
 		const auth = getAuth(app);
 
 		// DOM references
-		const pendingList = document.getElementById("pending-list");
-		const readyList = document.getElementById("ready-list");
-		const cancelledList = document.getElementById("cancelled-list");
+		const ordersList = document.getElementById("orders-list");
 		const lastUpdated = document.getElementById("last-updated");
-		const overlay = document.getElementById("confirm-overlay");
-		const confirmYes = document.getElementById("confirm-yes");
-		const confirmNo = document.getElementById("confirm-no");
 		const authOverlay = document.getElementById("auth-overlay");
 		const authEmail = document.getElementById("auth-email");
 		const authPassword = document.getElementById("auth-password");
@@ -308,8 +281,6 @@
 		const allowedEmail = "shubhakumarvel@gmail.com"; // TODO: replace with the real cashier email
 		authEmail.value = allowedEmail;
 		authEmail.readOnly = true;
-
-		let pendingCancelId = null;
 
 		const formatCurrency = (v) => `RM ${Number(v || 0).toFixed(2)}`;
 		const formatTimestamp = (ts) => {
@@ -330,45 +301,23 @@
 
 			const title = document.createElement("div");
 			title.className = "title";
-			title.textContent = order.orderId || order.id || "Order";
+			title.textContent = `Table ${order.tableNumber || order.table || "-"}`;
 
 			const pills = document.createElement("div");
 			pills.className = "pills";
 
-			const tablePill = document.createElement("span");
-			tablePill.className = "pill table";
-			tablePill.textContent = `Table ${order.table || "-"}`;
-			pills.appendChild(tablePill);
+			const handledPill = document.createElement("span");
+			const handled = (order.handledBy || "self").toLowerCase();
+			handledPill.className = "pill " + (handled === "waiter" ? "take" : "dine");
+			handledPill.textContent = handled === "waiter" ? "WAITER" : "SELF";
+			pills.appendChild(handledPill);
 
-			const servicePill = document.createElement("span");
-			servicePill.className = `pill ${order.service === "dine-in" ? "dine" : "take"}`;
-			servicePill.textContent = order.service === "dine-in" ? "Dine-in" : "Takeaway";
-			pills.appendChild(servicePill);
-
-			if (order.paymentStatus === "paid") {
-				const paidPill = document.createElement("span");
-				paidPill.className = "pill paid";
-				paidPill.textContent = "Paid";
-				pills.appendChild(paidPill);
-			} else {
-				const unpaid = document.createElement("span");
-				unpaid.className = "pill unpaid";
-				unpaid.textContent = "Unpaid";
-				pills.appendChild(unpaid);
-			}
-
-			const statusPill = document.createElement("span");
-			if (order.orderStatus === "cancelled") {
-				statusPill.className = "pill cancelled";
-				statusPill.textContent = "Cancelled";
-			} else if (order.orderStatus === "ready") {
-				statusPill.className = "pill ready";
-				statusPill.textContent = "Ready";
-			} else {
-				statusPill.className = "pill take";
-				statusPill.textContent = "In Kitchen";
-			}
-			pills.appendChild(statusPill);
+			const status = (order.paymentStatus || "unpaid").toLowerCase();
+			const payPill = document.createElement("span");
+			const statusClass = status === "paid" ? "paid" : status === "cancelled" ? "cancelled" : "unpaid";
+			payPill.className = "pill " + statusClass;
+			payPill.textContent = status.toUpperCase();
+			pills.appendChild(payPill);
 
 			header.appendChild(title);
 			header.appendChild(pills);
@@ -379,15 +328,11 @@
 			ul.className = "items";
 			(order.items || []).forEach((it) => {
 				const li = document.createElement("li");
-				const prepPill = document.createElement("span");
-				prepPill.className = `pill ${it.prep === "kitchen" ? "kitchen" : "buffet"}`;
-				prepPill.textContent = it.prep === "kitchen" ? "Kitchen Item" : "Buffet Item";
 				const name = document.createElement("span");
-				name.textContent = ` ${it.qty || 1} x ${it.name || "Item"}`;
+				name.textContent = `${it.qty || 1} x ${it.name || "Item"}`;
 				const price = document.createElement("span");
 				price.className = "item-meta";
 				price.textContent = ` — ${formatCurrency((it.price || 0) * (it.qty || 1))}`;
-				li.appendChild(prepPill);
 				li.appendChild(name);
 				li.appendChild(price);
 				ul.appendChild(li);
@@ -407,10 +352,11 @@
 			metaRow.className = "row";
 			const total = document.createElement("div");
 			total.className = "total";
-			total.textContent = `Total: ${formatCurrency(order.totalPrice)}`;
+			const computedTotal = (order.items || []).reduce((sum, i) => sum + (Number(i.price) || 0) * (i.qty || 1), 0);
+			total.textContent = `Total: ${formatCurrency(computedTotal)}`;
 			const time = document.createElement("div");
 			time.className = "meta";
-			time.textContent = formatTimestamp(order.timestamp);
+			time.textContent = formatTimestamp(order.createdAt || order.timestamp);
 			metaRow.appendChild(total);
 			metaRow.appendChild(time);
 			card.appendChild(metaRow);
@@ -421,15 +367,15 @@
 
 			const payBtn = document.createElement("button");
 			payBtn.className = "btn pay";
-			payBtn.textContent = "Mark as Paid";
-			payBtn.disabled = order.paymentStatus === "paid" || order.orderStatus === "cancelled";
-			payBtn.addEventListener("click", () => markAsPaid(order.id));
+			payBtn.textContent = "Mark as paid";
+			payBtn.disabled = status === "paid" || status === "cancelled";
+			payBtn.addEventListener("click", () => markPaid(order.id));
 
 			const cancelBtn = document.createElement("button");
 			cancelBtn.className = "btn cancel";
-			cancelBtn.textContent = "Cancel Order";
-			cancelBtn.disabled = order.orderStatus === "cancelled";
-			cancelBtn.addEventListener("click", () => openConfirm(order.id));
+			cancelBtn.textContent = "Cancel order";
+			cancelBtn.disabled = status === "cancelled";
+			cancelBtn.addEventListener("click", () => cancelOrder(order.id));
 
 			actions.appendChild(payBtn);
 			actions.appendChild(cancelBtn);
@@ -452,7 +398,7 @@
 		};
 
 		// Actions
-		const markAsPaid = async (id) => {
+		const markPaid = async (id) => {
 			if (!id) return;
 			try {
 				await updateDoc(doc(db, "orders", id), { paymentStatus: "paid" });
@@ -461,55 +407,28 @@
 			}
 		};
 
-		const openConfirm = (id) => {
-			pendingCancelId = id;
-			overlay.classList.add("active");
-		};
-
-		const closeConfirm = () => {
-			pendingCancelId = null;
-			overlay.classList.remove("active");
-		};
-
-		confirmNo.addEventListener("click", closeConfirm);
-		overlay.addEventListener("click", (e) => { if (e.target === overlay) closeConfirm(); });
-		confirmYes.addEventListener("click", async () => {
-			if (!pendingCancelId) return;
+		const cancelOrder = async (id) => {
+			if (!id) return;
 			try {
-				await updateDoc(doc(db, "orders", pendingCancelId), { orderStatus: "cancelled" });
+				await updateDoc(doc(db, "orders", id), { paymentStatus: "cancelled", orderStatus: "cancelled", sentToKitchen: false });
 			} catch (err) {
 				console.error("Failed to cancel", err);
-			} finally {
-				closeConfirm();
 			}
-		});
+		};
 
 		// Live listener (activated only when authenticated)
 		let unsubscribe = null;
 
 		const startOrdersListener = () => {
 			const ordersRef = collection(db, "orders");
-			const q = query(ordersRef, orderBy("timestamp", "desc"));
+			const q = query(ordersRef, orderBy("createdAt", "desc"));
 			unsubscribe = onSnapshot(q, (snapshot) => {
-				const pending = [];
-				const ready = [];
-				const cancelled = [];
-
+				const all = [];
 				snapshot.forEach((docSnap) => {
 					const data = docSnap.data();
-					const order = { ...data, id: docSnap.id };
-					if (order.orderStatus === "cancelled") {
-						cancelled.push(order);
-					} else if (order.orderStatus === "ready") {
-						ready.push(order);
-					} else {
-						pending.push(order);
-					}
+					all.push({ ...data, id: docSnap.id });
 				});
-
-				renderList(pendingList, pending, "No pending orders.");
-				renderList(readyList, ready, "No ready orders.");
-				renderList(cancelledList, cancelled, "No cancelled orders.");
+				renderList(ordersList, all, "No orders yet.");
 				lastUpdated.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
 			}, (error) => {
 				console.error("orders onSnapshot error", error);
@@ -521,22 +440,22 @@
 				unsubscribe();
 				unsubscribe = null;
 			}
-			renderList(pendingList, [], "Sign in to view orders.");
-			renderList(readyList, [], "Sign in to view orders.");
-			renderList(cancelledList, [], "Sign in to view orders.");
+			renderList(ordersList, [], "Sign in to view orders.");
 			lastUpdated.textContent = "Updated: —";
 		};
 
 		// Auth helpers
 		const showAuth = (msg = "") => {
 			authError.textContent = msg;
+			authEmail.value = allowedEmail;
+			authPassword.value = "";
 			authOverlay.classList.add("active");
 		};
 
 		const hideAuth = () => {
 			authOverlay.classList.remove("active");
 			authError.textContent = "";
-			authEmail.value = "";
+			authEmail.value = allowedEmail;
 			authPassword.value = "";
 		};
 
