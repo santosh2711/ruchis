@@ -359,12 +359,10 @@
 				tap.textContent = "Tap to edit";
 				info.appendChild(tap);
 
-				if (item.note) {
-					const noteLine = document.createElement("p");
-					noteLine.className = "note-line";
-					noteLine.textContent = `Note: ${item.note}`;
-					info.appendChild(noteLine);
-				}
+				const noteLine = document.createElement("p");
+				noteLine.className = "note-line";
+				noteLine.textContent = `Note: ${item.note ? item.note : "None"}`;
+				info.appendChild(noteLine);
 
 				const priceEl = document.createElement("div");
 				priceEl.className = "price";
