@@ -163,6 +163,35 @@
 			white-space: nowrap;
 		}
 
+		.sub-nav {
+			display: none;
+			gap: 8px;
+			padding: 6px 0 8px;
+			margin: 0 -16px 10px;
+			overflow-x: auto;
+			border-bottom: 1px solid var(--border);
+			background: #ffffff;
+		}
+
+		.sub-nav-inner {
+			display: inline-flex;
+			gap: 8px;
+			padding: 0 16px;
+			white-space: nowrap;
+		}
+
+		.view-categories {
+			display: none;
+			padding: 8px 12px;
+			border: 1px solid var(--border);
+			background: #fff7ed;
+			color: var(--orange-dark);
+			border-radius: 10px;
+			font-weight: 800;
+			cursor: pointer;
+			margin: 4px 0 8px;
+		}
+
 		.search-bar {
 			position: sticky;
 			top: 76px;
@@ -668,6 +697,10 @@
 		<div class="category-nav" id="category-nav" style="display:none;">
 			<div class="category-nav-inner" id="category-nav-inner"></div>
 		</div>
+		<button class="view-categories" id="view-categories" type="button" style="display:none;">View Categories</button>
+		<div class="sub-nav" id="sub-nav">
+			<div class="sub-nav-inner" id="sub-nav-inner"></div>
+		</div>
 		<div id="menu-container"></div>
 	</main>
 
@@ -747,16 +780,42 @@
 		const searchBar = document.getElementById("search-bar");
 		const searchInput = document.getElementById("menu-search");
 		const vegToggle = document.getElementById("veg-toggle");
+		const viewCategoriesBtn = document.getElementById("view-categories");
+		const subNav = document.getElementById("sub-nav");
+		const subNavInner = document.getElementById("sub-nav-inner");
 		const genericErrorHtml = '<div class="empty">Unable to load menu. Please check your internet connection or permissions and try again.</div>';
 		let checkoutPending = false;
 		let allItems = [];
 		let profileOpen = false;
 		let vegOnly = false;
+		let activeMain = "Breakfast";
+		let subNavVisible = false;
 
 		const urlParams = new URLSearchParams(window.location.search);
 		const tableNumber = urlParams.get("table") || "1";
 		const cartKey = `cart_table${tableNumber}`;
 		const serviceKey = `service_choice_table${tableNumber}`;
+
+		// Map sub-categories to main categories (UI only)
+		const CATEGORY_MAP = {
+			Breakfast: ["Chapati", "Dosa", "Idly", "Poori", "Tea"],
+			Lunch: ["Biriyani", "Chicken Special", "Claypot", "Meals", "Parotta"],
+			Dinner: ["Chicken Special", "Claypot", "Goreng", "Noodles", "Rolls", "Sandwich"],
+			Drinks: ["Coffee", "Juices", "Lassi", "Milk Drinks"],
+		};
+
+		const MAIN_CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Drinks"];
+		const subToMain = (() => {
+			const map = {};
+			Object.entries(CATEGORY_MAP).forEach(([main, subs]) => {
+				subs.forEach((sub) => {
+					const key = (sub || "").toLowerCase();
+					if (!map[key]) map[key] = [];
+					map[key].push(main);
+				});
+			});
+			return map;
+		})();
 
 		tableNumberSpan.textContent = tableNumber;
 
@@ -947,50 +1006,83 @@
 		const renderMenu = (items) => {
 			menuContainer.innerHTML = "";
 			categoryNavInner.innerHTML = "";
+			subNavInner.innerHTML = "";
 			categoryNav.style.display = "none";
+			subNav.style.display = "none";
+			viewCategoriesBtn.style.display = "none";
 
 			if (!items.length) {
 				menuContainer.innerHTML = '<div class="empty">No menu items available right now.</div>';
 				return;
 			}
 
-			const grouped = items.reduce((acc, item) => {
-				const category = item.category || "Others";
-				if (!acc[category]) acc[category] = [];
-				acc[category].push(item);
-				return acc;
-			}, {});
+			// Group items by main/sub using UI-only map
+			const groupedByMain = {};
+			items.forEach((item) => {
+				const rawSub = item.category || "Others";
+				const subLabel = rawSub.trim() || "Others";
+				const mapped = subToMain[subLabel.toLowerCase()];
+				const hasMapping = Array.isArray(mapped) && mapped.length;
+				const mains = hasMapping ? mapped : [activeMain];
+				mains.forEach((mainCat) => {
+					const mainKey = MAIN_CATEGORIES.includes(mainCat) ? mainCat : activeMain;
+					const subKey = hasMapping ? subLabel : "Others";
+					if (!groupedByMain[mainKey]) groupedByMain[mainKey] = {};
+					if (!groupedByMain[mainKey][subKey]) groupedByMain[mainKey][subKey] = [];
+					groupedByMain[mainKey][subKey].push(item);
+				});
+			});
 
-			const sectionIds = [];
+			categoryNav.style.display = "block";
+			categoryNavInner.innerHTML = "";
+			const mainFrag = document.createDocumentFragment();
+			MAIN_CATEGORIES.forEach((main) => {
+				const btn = document.createElement("button");
+				btn.className = "category-pill-btn";
+				btn.textContent = main;
+				btn.classList.toggle("active", main === activeMain);
+				btn.addEventListener("click", () => {
+					activeMain = main;
+					subNavVisible = false;
+					renderMenu(items);
+				});
+				mainFrag.appendChild(btn);
+			});
+			categoryNavInner.appendChild(mainFrag);
+
+			const activeGroups = groupedByMain[activeMain] || {};
+			const subCategories = Object.keys(activeGroups).sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+			viewCategoriesBtn.style.display = subCategories.length ? "inline-flex" : "none";
+			viewCategoriesBtn.textContent = subNavVisible ? "Hide Categories" : "View Categories";
 			const sectionFrag = document.createDocumentFragment();
+			const sectionIds = [];
 
-				Object.keys(grouped).forEach((category) => {
-				const categoryItems = grouped[category];
-				if (!categoryItems.length) return;
+			subCategories.forEach((subCat) => {
+				const itemsInSub = (activeGroups[subCat] || []).slice().sort((a, b) => (a.name || "").localeCompare(b.name || "", "en", { sensitivity: "base" }));
+				if (!itemsInSub.length) return;
+				const sectionId = `cat-${(subCat || "others").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "others"}`;
+				sectionIds.push({ id: sectionId, label: subCat });
 
-				const sectionId = `cat-${(category || "others").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "others"}`;
-				sectionIds.push({ id: sectionId, label: category });
-
-					const section = document.createElement("section");
-					section.className = "category";
-					section.id = sectionId;
+				const section = document.createElement("section");
+				section.className = "category";
+				section.id = sectionId;
 
 				const title = document.createElement("h2");
 				title.className = "category-title";
-				title.textContent = category;
+				title.textContent = subCat;
 				section.appendChild(title);
 
-				categoryItems.forEach((item) => {
+				itemsInSub.forEach((item) => {
 					const card = document.createElement("div");
 					card.className = "item-card";
 
-						const img = document.createElement("img");
-						img.className = "item-image";
-						  const imageSrc = item.image || item.imageURL || "https://via.placeholder.com/120x120?text=No+Image";
-						  img.src = imageSrc;
-						img.alt = item.name || "Menu item";
-						img.loading = "lazy";
-						img.decoding = "async";
+					const img = document.createElement("img");
+					img.className = "item-image";
+					const imageSrc = item.image || item.imageURL || "https://via.placeholder.com/120x120?text=No+Image";
+					img.src = imageSrc;
+					img.alt = item.name || "Menu item";
+					img.loading = "lazy";
+					img.decoding = "async";
 
 					const info = document.createElement("div");
 					info.className = "item-info";
@@ -1002,10 +1094,10 @@
 					nameEl.className = "item-name";
 					nameEl.textContent = item.name || "Unnamed Item";
 
-						const vegBadge = document.createElement("span");
-						const isVeg = Boolean(item.veg);
-						vegBadge.className = `veg-dot ${isVeg ? "veg" : "non-veg"}`;
-						vegBadge.title = isVeg ? "Veg" : "Non-Veg";
+					const vegBadge = document.createElement("span");
+					const isVeg = Boolean(item.veg);
+					vegBadge.className = `veg-dot ${isVeg ? "veg" : "non-veg"}`;
+					vegBadge.title = isVeg ? "Veg" : "Non-Veg";
 
 					topRow.appendChild(vegBadge);
 					topRow.appendChild(nameEl);
@@ -1026,14 +1118,14 @@
 
 					const price = document.createElement("div");
 					price.className = "price";
-					  price.textContent = item.price !== undefined ? `RM ${Number(item.price).toFixed(2)}` : "Price on request";
+					price.textContent = item.price !== undefined ? `RM ${Number(item.price).toFixed(2)}` : "Price on request";
 
 					const addBtn = document.createElement("button");
 					addBtn.className = "add-btn";
 					addBtn.type = "button";
 					addBtn.textContent = "Add";
 					addBtn.addEventListener("click", (event) => {
-						event.stopPropagation(); // prevent navigation when adding to cart
+						event.stopPropagation();
 						animateToCart(img);
 						addToCart({
 							id: item.id,
@@ -1043,7 +1135,6 @@
 						});
 					});
 
-					// Navigate to item detail page when the card is clicked
 					card.style.cursor = "pointer";
 					card.addEventListener("click", () => {
 						const params = new URLSearchParams({
@@ -1075,35 +1166,39 @@
 
 			menuContainer.appendChild(sectionFrag);
 
-			if (sectionIds.length) {
-				categoryNav.style.display = "block";
-				categoryNavInner.innerHTML = "";
-				const navFrag = document.createDocumentFragment();
+			if (!subCategories.length) {
+				menuContainer.innerHTML = '<div class="empty">No items for this category.</div>';
+			}
 
-				sectionIds.forEach(({ id, label }, index) => {
+			if (subCategories.length) {
+				subNav.style.display = subNavVisible ? "flex" : "none";
+				subNavInner.innerHTML = "";
+				const subFrag = document.createDocumentFragment();
+				subCategories.forEach((label, idx) => {
 					const btn = document.createElement("button");
 					btn.className = "category-pill-btn";
 					btn.textContent = label;
-					btn.setAttribute("data-target", id);
+					btn.setAttribute("data-target", `cat-${(label || "others").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "others"}`);
 					btn.addEventListener("click", () => {
-						const target = document.getElementById(id);
+						const target = document.getElementById(btn.getAttribute("data-target"));
 						if (!target) return;
-						const headerOffset = 80; // header + nav padding
+						const headerOffset = 90;
 						const top = target.getBoundingClientRect().top + window.scrollY - headerOffset;
 						window.scrollTo({ top, behavior: "smooth" });
 					});
-					if (index === 0) btn.classList.add("active");
-					navFrag.appendChild(btn);
+					if (idx === 0) btn.classList.add("active");
+					subFrag.appendChild(btn);
 				});
+				subNavInner.appendChild(subFrag);
+			}
 
-				categoryNavInner.appendChild(navFrag);
-
+			if (sectionIds.length && subNavVisible) {
 				const observer = new IntersectionObserver((entries) => {
 					entries.forEach((entry) => {
 						const id = entry.target.id;
-						const btn = categoryNavInner.querySelector(`[data-target="${id}"]`);
+						const btn = subNavInner.querySelector(`[data-target="${id}"]`);
 						if (btn && entry.isIntersecting) {
-							categoryNavInner.querySelectorAll(".category-pill-btn").forEach((b) => b.classList.remove("active"));
+							subNavInner.querySelectorAll(".category-pill-btn").forEach((b) => b.classList.remove("active"));
 							btn.classList.add("active");
 							btn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
 						}
@@ -1238,6 +1333,12 @@
 			renderMenu(filteredItems());
 		});
 
+		viewCategoriesBtn?.addEventListener("click", () => {
+			subNavVisible = !subNavVisible;
+			viewCategoriesBtn.textContent = subNavVisible ? "Hide Categories" : "View Categories";
+			renderMenu(filteredItems());
+		});
+
 		cartButton.addEventListener("click", openCart);
 		cartOverlay.addEventListener("click", closeCart);
 		closeCartBtn.addEventListener("click", closeCart);
@@ -1246,6 +1347,11 @@
 		// Initialize immediately without forcing service choice
 		updateCartCount();
 		renderCartDrawer();
+		window.addEventListener("pageshow", () => {
+			// Refresh cart count when returning from item page (including bfcache restores)
+			updateCartCount();
+			renderCartDrawer();
+		});
 		loadMenu();
 	</script>
 </body>
