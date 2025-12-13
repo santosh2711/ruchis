@@ -798,7 +798,7 @@
 
 		const CATEGORY_MAP = {
 			Breakfast: ["Chapati", "Dosa", "Idly", "Poori", "Tea"],
-			Lunch: ["Biriyani", "Chicken Special", "Claypot", "Meals", "Parotta"],
+			Lunch: ["Chicken Special", "Claypot", "Goreng", "Noodles", "Rolls", "Sandwich"],
 			Dinner: ["Chicken Special", "Claypot", "Goreng", "Noodles", "Rolls", "Sandwich"],
 			Drinks: ["Coffee", "Juices", "Lassi", "Milk Drinks"],
 		};
@@ -1048,8 +1048,6 @@
 				const hasMapping = Array.isArray(mapped) && mapped.length;
 				if (hasMapping) {
 					mapped.forEach((mainCat) => pushItem(mainCat, subLabel, item));
-				} else if (activeMain !== "All") {
-					pushItem(activeMain, subLabel, item);
 				}
 			});
 
