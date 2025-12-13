@@ -3,7 +3,7 @@
 // TODO: Add filter by station or category if needed later
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, query, where, onSnapshot, updateDoc, doc, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, query, where, onSnapshot, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // Firebase initialization snippet (reuse project config)
 const firebaseConfig = {
@@ -28,10 +28,16 @@ const notifyAudio = document.getElementById("notify-audio");
 const seenInKitchen = new Set();
 const orderMap = new Map();
 
-// Format a Firestore timestamp (number or Timestamp) to readable time
+// Normalize Firestore timestamps (createdAt/timestamp) into millis for sorting/formatting
+const toMillis = (ts) => {
+    if (!ts) return 0;
+    if (typeof ts === "number") return ts;
+    return ts?.toMillis?.() || 0;
+};
+
+// Format a Firestore timestamp (createdAt/timestamp) to readable time
 const formatTimestamp = (ts) => {
-    if (!ts) return "";
-    const value = typeof ts === "number" ? ts : ts?.toMillis?.();
+    const value = toMillis(ts);
     if (!value) return "";
     const d = new Date(value);
     return d.toLocaleString(undefined, {
@@ -109,7 +115,7 @@ const renderCard = (order, isNew, onReadyClick) => {
 
     const meta = document.createElement("div");
     meta.className = "meta";
-    meta.textContent = formatTimestamp(order.timestamp);
+    meta.textContent = formatTimestamp(order.createdAt || order.timestamp);
     card.appendChild(meta);
 
     if (onReadyClick) {
@@ -173,7 +179,7 @@ const handleMarkReady = async (order) => {
 const renderCombined = (newIds) => {
     const all = Array.from(orderMap.values())
         .filter((o) => o.orderStatus === "in-kitchen" || o.orderStatus === "ready")
-        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); // latest on top
+        .sort((a, b) => toMillis(b.createdAt || b.timestamp) - toMillis(a.createdAt || a.timestamp)); // latest on top
 
     renderList(inKitchenEl, all, {
         newIds,
@@ -187,15 +193,14 @@ const renderCombined = (newIds) => {
 const listenInKitchen = () => {
     const q = query(
         collection(db, "orders"),
-        where("orderStatus", "==", "in-kitchen"),
-        orderBy("timestamp", "desc")
+        where("orderStatus", "==", "in-kitchen")
     );
 
     onSnapshot(q, (snapshot) => {
         const newIds = new Set();
         snapshot.docs.forEach((docSnap) => {
             const data = docSnap.data();
-            const order = { ...data, id: docSnap.id };
+            const order = { ...data, id: docSnap.id, createdAt: data.createdAt || data.timestamp };
             if (!seenInKitchen.has(docSnap.id)) {
                 newIds.add(docSnap.id);
                 seenInKitchen.add(docSnap.id);
@@ -213,14 +218,13 @@ const listenInKitchen = () => {
 const listenReady = () => {
     const q = query(
         collection(db, "orders"),
-        where("orderStatus", "==", "ready"),
-        orderBy("timestamp", "desc")
+        where("orderStatus", "==", "ready")
     );
 
     onSnapshot(q, (snapshot) => {
         snapshot.docs.forEach((docSnap) => {
             const data = docSnap.data();
-            const order = { ...data, id: docSnap.id };
+            const order = { ...data, id: docSnap.id, createdAt: data.createdAt || data.timestamp };
             orderMap.set(docSnap.id, order);
         });
         renderCombined(new Set());
