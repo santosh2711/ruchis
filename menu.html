@@ -239,7 +239,6 @@
 			padding: 32px 0;
 		}
 
-		/* Service selection modal */
 		.service-overlay {
 			position: fixed;
 			inset: 0;
@@ -299,7 +298,6 @@
 			transform: translateY(-1px);
 		}
 
-		/* Cart drawer */
 		.cart-overlay {
 			position: fixed;
 			inset: 0;
@@ -770,6 +768,7 @@
 		const serviceButtons = serviceOverlay.querySelectorAll(".service-btn");
 		const categoryNav = document.getElementById("category-nav");
 		const categoryNavInner = document.getElementById("category-nav-inner");
+		const headerEl = document.querySelector("header");
 		const profileBtn = document.getElementById("profile-btn");
 		const profileDropdown = document.getElementById("profile-dropdown");
 		const profileDisplay = document.getElementById("profile-display");
@@ -788,7 +787,7 @@
 		let allItems = [];
 		let profileOpen = false;
 		let vegOnly = false;
-		let activeMain = "Breakfast";
+		let activeMain = "All";
 		let subNavVisible = false;
 
 		const urlParams = new URLSearchParams(window.location.search);
@@ -796,7 +795,6 @@
 		const cartKey = `cart_table${tableNumber}`;
 		const serviceKey = `service_choice_table${tableNumber}`;
 
-		// Map sub-categories to main categories (UI only)
 		const CATEGORY_MAP = {
 			Breakfast: ["Chapati", "Dosa", "Idly", "Poori", "Tea"],
 			Lunch: ["Biriyani", "Chicken Special", "Claypot", "Meals", "Parotta"],
@@ -804,7 +802,7 @@
 			Drinks: ["Coffee", "Juices", "Lassi", "Milk Drinks"],
 		};
 
-		const MAIN_CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Drinks"];
+		const MAIN_CATEGORIES = ["All", "Breakfast", "Lunch", "Dinner", "Drinks"];
 		const subToMain = (() => {
 			const map = {};
 			Object.entries(CATEGORY_MAP).forEach(([main, subs]) => {
@@ -835,6 +833,21 @@
 
 		const formatPrice = (value) => `RM ${Number(value || 0).toFixed(2)}`;
 		const vegPrefKey = `veg_only_filter_${tableNumber}`;
+
+		const normalizeSubcategory = (raw) => {
+			const cleaned = (raw || "").trim();
+			if (!cleaned) return "General";
+			const lower = cleaned.toLowerCase();
+			if (lower === "others" || lower === "other") return "General";
+			return cleaned;
+		};
+
+		const getScrollOffset = () => {
+			const headerHeight = headerEl?.offsetHeight || 0;
+			const searchHeight = searchBar?.offsetHeight || 0;
+			const categoryHeight = categoryNav?.offsetHeight || 0;
+			return headerHeight + searchHeight + categoryHeight + 12;
+		};
 
 		const setServiceChoice = (choice) => {
 			localStorage.setItem(serviceKey, choice);
@@ -1016,21 +1029,27 @@
 				return;
 			}
 
-			// Group items by main/sub using UI-only map
-			const groupedByMain = {};
+			const groupedByMain = { All: {} };
+			const pushItem = (mainKey, subKey, itm) => {
+				const main = MAIN_CATEGORIES.includes(mainKey) ? mainKey : activeMain;
+				const sub = subKey || "Others";
+				if (!groupedByMain[main]) groupedByMain[main] = {};
+				if (!groupedByMain[main][sub]) groupedByMain[main][sub] = [];
+				groupedByMain[main][sub].push(itm);
+			};
+
 			items.forEach((item) => {
-				const rawSub = item.category || "Others";
-				const subLabel = rawSub.trim() || "Others";
+				const rawSub = item.category;
+				const subLabel = normalizeSubcategory(rawSub);
+				pushItem("All", subLabel, item);
+
 				const mapped = subToMain[subLabel.toLowerCase()];
 				const hasMapping = Array.isArray(mapped) && mapped.length;
-				const mains = hasMapping ? mapped : [activeMain];
-				mains.forEach((mainCat) => {
-					const mainKey = MAIN_CATEGORIES.includes(mainCat) ? mainCat : activeMain;
-					const subKey = hasMapping ? subLabel : "Others";
-					if (!groupedByMain[mainKey]) groupedByMain[mainKey] = {};
-					if (!groupedByMain[mainKey][subKey]) groupedByMain[mainKey][subKey] = [];
-					groupedByMain[mainKey][subKey].push(item);
-				});
+				if (hasMapping) {
+					mapped.forEach((mainCat) => pushItem(mainCat, subLabel, item));
+				} else if (activeMain !== "All") {
+					pushItem(activeMain, subLabel, item);
+				}
 			});
 
 			categoryNav.style.display = "block";
@@ -1066,6 +1085,7 @@
 				const section = document.createElement("section");
 				section.className = "category";
 				section.id = sectionId;
+					section.style.scrollMarginTop = `${getScrollOffset()}px`;
 
 				const title = document.createElement("h2");
 				title.className = "category-title";
@@ -1182,7 +1202,7 @@
 					btn.addEventListener("click", () => {
 						const target = document.getElementById(btn.getAttribute("data-target"));
 						if (!target) return;
-						const headerOffset = 90;
+						const headerOffset = getScrollOffset();
 						const top = target.getBoundingClientRect().top + window.scrollY - headerOffset;
 						window.scrollTo({ top, behavior: "smooth" });
 					});
@@ -1193,6 +1213,7 @@
 			}
 
 			if (sectionIds.length && subNavVisible) {
+				const observerOffset = getScrollOffset() + 10;
 				const observer = new IntersectionObserver((entries) => {
 					entries.forEach((entry) => {
 						const id = entry.target.id;
@@ -1200,10 +1221,14 @@
 						if (btn && entry.isIntersecting) {
 							subNavInner.querySelectorAll(".category-pill-btn").forEach((b) => b.classList.remove("active"));
 							btn.classList.add("active");
-							btn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+							const parent = subNavInner.parentElement;
+							if (parent) {
+								const targetX = btn.offsetLeft - 40;
+								parent.scrollTo({ left: targetX < 0 ? 0 : targetX, behavior: "smooth" });
+							}
 						}
 					});
-				}, { root: null, rootMargin: "-90px 0px -60% 0px", threshold: [0, 0.25, 0.5] });
+				}, { root: null, rootMargin: `-${observerOffset}px 0px -60% 0px`, threshold: [0, 0.25, 0.5] });
 
 				sectionIds.forEach(({ id }) => {
 					const el = document.getElementById(id);
@@ -1344,11 +1369,9 @@
 		closeCartBtn.addEventListener("click", closeCart);
 		checkoutBtn.addEventListener("click", goToCheckout);
 
-		// Initialize immediately without forcing service choice
 		updateCartCount();
 		renderCartDrawer();
 		window.addEventListener("pageshow", () => {
-			// Refresh cart count when returning from item page (including bfcache restores)
 			updateCartCount();
 			renderCartDrawer();
 		});
