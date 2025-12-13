@@ -40,7 +40,7 @@
 		position: fixed;
 		inset: 0;
 		pointer-events: none;
-		opacity: 0.04;
+		opacity: 0.02;
 		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%239a2245' stroke-width='2' stroke-opacity='0.5'%3E%3Cpath d='M10 60c20-30 60-30 80 0M10 60c20 30 60 30 80 0'/%3E%3Ccircle cx='60' cy='60' r='6'/%3E%3C/g%3E%3C/svg%3E");
 		background-size: 180px 180px;
 		z-index: 0;
@@ -186,7 +186,7 @@
 			z-index: 120;
 			background: transparent;
 			padding: 0;
-			margin: 0 -16px 8px;
+			margin: 0 -16px 6px;
 			overflow-x: visible;
 			border-bottom: none;
 		}
@@ -194,20 +194,20 @@
 		.category-nav-inner {
 			display: inline-flex;
 			gap: 8px;
-			padding: 8px 16px 10px;
+			padding: 6px 12px 8px;
 			white-space: nowrap;
-			background: rgba(255, 255, 255, 0.94);
-			border: 1px solid var(--border);
-			border-radius: 14px;
-			box-shadow: 0 12px 30px rgba(0, 0, 0, 0.07);
-			backdrop-filter: blur(8px);
+			background: transparent;
+			border: none;
+			border-radius: 12px;
+			box-shadow: none;
+			backdrop-filter: none;
 		}
 
 		.sub-nav {
 			display: none;
 			gap: 8px;
-			padding: 8px 0 10px;
-			margin: 0 -16px 10px;
+			padding: 8px 0 8px;
+			margin: 0 -16px 8px;
 			overflow-x: auto;
 			border-bottom: none;
 			background: transparent;
@@ -216,42 +216,42 @@
 		.sub-nav-inner {
 			display: inline-flex;
 			gap: 8px;
-			padding: 8px 16px;
+			padding: 6px 12px;
 			white-space: nowrap;
-			background: rgba(255, 255, 255, 0.94);
-			border: 1px solid var(--border);
-			border-radius: 14px;
-			box-shadow: 0 12px 30px rgba(0, 0, 0, 0.07);
-			backdrop-filter: blur(8px);
+			background: transparent;
+			border: none;
+			border-radius: 12px;
+			box-shadow: none;
+			backdrop-filter: none;
 		}
 
 		.view-categories {
 			display: none;
 			padding: 8px 12px;
-			border: 1px solid var(--border);
-			background: rgba(255, 247, 237, 0.9);
+			border: 1px solid rgba(226, 232, 240, 0.7);
+			background: rgba(255, 255, 255, 0.85);
 			color: var(--orange-dark);
 			border-radius: 10px;
 			font-weight: 800;
 			cursor: pointer;
 			margin: 4px 0 8px;
-			box-shadow: 0 8px 18px rgba(249, 115, 22, 0.1);
+			box-shadow: none;
 		}
 
 		.search-bar {
 			position: sticky;
 			top: 76px;
 			z-index: 115;
-			background: rgba(255, 255, 255, 0.92);
-			padding: 10px 12px;
-			margin: 0 0 10px;
+			background: rgba(255, 255, 255, 0.86);
+			padding: 8px 10px;
+			margin: 0 0 8px;
 			display: flex;
 			gap: 8px;
 			align-items: center;
-			border: 1px solid var(--border);
-			border-radius: 14px;
-			box-shadow: 0 10px 26px rgba(0, 0, 0, 0.06);
-			backdrop-filter: blur(6px);
+			border: 1px solid rgba(226, 232, 240, 0.7);
+			border-radius: 12px;
+			box-shadow: none;
+			backdrop-filter: none;
 		}
 
 		.search-input {
@@ -270,7 +270,7 @@
 			border-radius: 999px;
 			font-weight: 700;
 			cursor: pointer;
-			transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.12s ease;
+			transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 			box-shadow: 0 0 0 rgba(0, 0, 0, 0);
 		}
 
@@ -279,11 +279,9 @@
 			border-color: var(--orange);
 			color: var(--orange-dark);
 			box-shadow: 0 6px 16px rgba(249, 115, 22, 0.18);
-			transform: translateY(-1px);
 		}
 
 		.category-pill-btn:hover {
-			transform: translateY(-1px);
 			border-color: var(--orange);
 		}
 
@@ -586,11 +584,10 @@
 			box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 			margin-bottom: 10px;
 			touch-action: manipulation;
-			transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+			transition: box-shadow 0.16s ease, border-color 0.16s ease;
 		}
 
 		.item-card:hover {
-			transform: translateY(-2px);
 			box-shadow: 0 10px 24px rgba(15, 118, 110, 0.12);
 			border-color: rgba(15, 118, 110, 0.4);
 		}
