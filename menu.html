@@ -797,6 +797,8 @@
 		const profileCircle = document.getElementById("profile-circle");
 		const profileName = document.getElementById("profile-name");
 		const logoutBtn = document.getElementById("logout-btn");
+		const guestLabel = "Guest";
+		const guestEmail = "Continuing as guest";
 		const searchBar = document.getElementById("search-bar");
 		const searchInput = document.getElementById("menu-search");
 		const vegToggle = document.getElementById("veg-toggle");
@@ -851,6 +853,12 @@
 
 		const saveCart = (cart) => {
 			localStorage.setItem(cartKey, JSON.stringify(cart));
+		};
+
+		const clearCart = () => {
+			saveCart([]);
+			updateCartCount();
+			renderCartDrawer();
 		};
 
 		const formatPrice = (value) => `RM ${Number(value || 0).toFixed(2)}`;
@@ -1356,16 +1364,13 @@
 		});
 
 		onAuthStateChanged(auth, (user) => {
-			if (!user) {
-				window.location.href = "login.html";
-				return;
-			}
-			const displayName = user.displayName || user.email?.split("@")[0] || "Guest";
-			const email = user.email || "Signed in";
+			const displayName = user?.displayName || user?.email?.split("@")[0] || guestLabel;
+			const email = user?.email || guestEmail;
 			profileDisplay.textContent = displayName;
 			profileEmail.textContent = email;
-			profileName.textContent = displayName;
+			if (profileName) profileName.textContent = displayName;
 			profileCircle.textContent = (displayName[0] || "?").toUpperCase();
+			if (logoutBtn) logoutBtn.style.display = user ? "block" : "none";
 		});
 
 		serviceButtons.forEach((btn) => {
