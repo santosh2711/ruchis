@@ -463,6 +463,7 @@
 						orderId: "" // set after creation for doc id
 					});
 					await updateDoc(docRef, { orderId: docRef.id });
+					localStorage.removeItem(cartKey);
 					const params = new URLSearchParams({ table, service, orderId: docRef.id });
 					window.location.href = `order-status.html?${params.toString()}`;
 				} catch (err) {
