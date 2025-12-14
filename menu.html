@@ -153,6 +153,26 @@
 			background: #ffffff;
 			padding: 8px 0 6px;
 			margin: 0 -16px 8px;
+		.item-card.unavailable {
+			opacity: 0.35;
+			filter: blur(2.5px);
+		}
+		.item-card.unavailable .add-btn {
+			background: #e2e8f0;
+			color: #94a3b8;
+			cursor: not-allowed;
+		}
+		.unavailable-badge {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			padding: 6px 10px;
+			border-radius: 10px;
+			background: #fee2e2;
+			color: #991b1b;
+			font-weight: 800;
+			font-size: 12px;
+		}
 			overflow-x: auto;
 			border-bottom: 1px solid var(--border);
 		}
@@ -737,7 +757,7 @@
 
 	<script type="module">
 		import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-		import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+		import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 		import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 		const firebaseConfig = {
@@ -790,6 +810,7 @@
 		let vegOnly = false;
 		let activeMain = "All";
 		let subNavVisible = false;
+		let menuUnsub = null;
 
 		const urlParams = new URLSearchParams(window.location.search);
 		const tableNumber = urlParams.get("table") || "1";
@@ -1139,12 +1160,17 @@
 					price.className = "price";
 					price.textContent = item.price !== undefined ? `RM ${Number(item.price).toFixed(2)}` : "Price on request";
 
+					const unavailable = item.available === false;
+					if (unavailable) card.classList.add("unavailable");
+
 					const addBtn = document.createElement("button");
 					addBtn.className = "add-btn";
 					addBtn.type = "button";
-					addBtn.textContent = "Add";
+					addBtn.textContent = unavailable ? "Not available" : "Add";
+					addBtn.disabled = unavailable;
 					addBtn.addEventListener("click", (event) => {
 						event.stopPropagation();
+						if (unavailable) return;
 						animateToCart(img);
 						addToCart({
 							id: item.id,
@@ -1154,8 +1180,9 @@
 						});
 					});
 
-					card.style.cursor = "pointer";
+					card.style.cursor = unavailable ? "not-allowed" : "pointer";
 					card.addEventListener("click", () => {
+						if (unavailable) return;
 						const params = new URLSearchParams({
 							id: item.id,
 							name: item.name || "",
@@ -1167,6 +1194,12 @@
 						window.location.href = `item.html?${params.toString()}`;
 					});
 
+					if (unavailable) {
+						const unavailableTag = document.createElement("span");
+						unavailableTag.className = "unavailable-badge";
+						unavailableTag.textContent = "Not available";
+						bottomRow.appendChild(unavailableTag);
+					}
 					bottomRow.appendChild(price);
 					bottomRow.appendChild(addBtn);
 
@@ -1256,23 +1289,23 @@
 			});
 		};
 
-		const loadMenu = async () => {
+		const startMenuListener = () => {
 			loadingEl.classList.add("active");
-			try {
-				const querySnapshot = await getDocs(collection(db, "menuItems"));
-				allItems = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+			if (menuUnsub) menuUnsub();
+			menuUnsub = onSnapshot(collection(db, "menuItems"), (snap) => {
+				allItems = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 				applyVegToggleState();
 				renderMenu(filteredItems());
 				searchBar.style.display = "flex";
-			} catch (error) {
+				loadingEl.classList.remove("active");
+			}, (error) => {
+				loadingEl.classList.remove("active");
 				console.error("Error loading menu", error);
 				const message = error?.code === "permission-denied"
 					? '<div class="empty">Access denied: Firestore rules are blocking reads. Please allow reads for the menu or sign in with an authorized user.</div>'
 					: genericErrorHtml;
 				menuContainer.innerHTML = message;
-			} finally {
-				loadingEl.classList.remove("active");
-			}
+			});
 		};
 
 		const handleSearch = () => {
@@ -1374,7 +1407,7 @@
 			updateCartCount();
 			renderCartDrawer();
 		});
-		loadMenu();
+		startMenuListener();
 	</script>
 </body>
 </html>
