@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="theme-color" content="#f97316" />
+	<title>RUCHI | Manage Menu</title>
+	<style>
+		:root {
+			--orange: #f97316;
+			--orange-dark: #ea580c;
+			--black: #0f172a;
+			--gray: #f8fafc;
+			--border: #e2e8f0;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			font-family: "Segoe UI", Tahoma, sans-serif;
+			background: #ffffff;
+			color: var(--black);
+			padding: 20px 14px 32px;
+		}
+
+		header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 10px;
+			margin: 0 auto 14px;
+			max-width: 1100px;
+		}
+
+		header h1 { margin: 0; font-size: 22px; color: var(--orange-dark); letter-spacing: 0.4px; }
+		header p { margin: 2px 0 0; color: #475569; font-weight: 600; }
+
+		.actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+		.btn-link {
+			border: 1px solid var(--border);
+			background: #fff7ed;
+			color: var(--orange-dark);
+			padding: 8px 12px;
+			border-radius: 10px;
+			font-weight: 800;
+			text-decoration: none;
+		}
+
+		main { max-width: 1100px; margin: 0 auto; display: grid; gap: 12px; }
+		main.hidden { display: none; }
+
+		.search-row { display: flex; gap: 8px; align-items: center; }
+		.search-row input {
+			flex: 1;
+			padding: 10px 12px;
+			border: 1px solid var(--border);
+			border-radius: 10px;
+			font-weight: 700;
+		}
+
+		.categories { display: flex; gap: 8px; flex-wrap: wrap; }
+		.cat-btn {
+			border: 1px solid var(--border);
+			background: #ffffff;
+			color: var(--black);
+			padding: 8px 12px;
+			border-radius: 999px;
+			font-weight: 700;
+			cursor: pointer;
+		}
+		.cat-btn.active { border-color: var(--orange); background: #fff7ed; color: var(--orange-dark); }
+
+		.list { border: 1px solid var(--border); border-radius: 14px; padding: 10px; background: #fff; display: grid; gap: 8px; }
+		.row {
+			display: grid;
+			grid-template-columns: 1fr auto auto auto;
+			gap: 8px;
+			align-items: center;
+			padding: 10px 8px;
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			background: var(--gray);
+		}
+		.row h3 { margin: 0; font-size: 15px; font-weight: 800; }
+		.row .meta { color: #475569; font-weight: 700; font-size: 13px; }
+		.row .price { font-weight: 800; color: var(--orange-dark); }
+		.toggle-wrap { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+		.empty { padding: 14px; color: #475569; font-weight: 700; text-align: center; }
+		.status { font-size: 12px; font-weight: 800; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); color: #075985; background: #e0f2fe; }
+
+		@media (max-width: 720px) {
+			header { flex-direction: column; align-items: flex-start; }
+			.row { grid-template-columns: 1fr auto; }
+			.status { justify-self: end; }
+		}
+	</style>
+</head>
+<body>
+	<header>
+		<div>
+			<h1>Manage Menu</h1>
+			<p>Search, filter, and toggle item availability</p>
+		</div>
+		<div class="actions">
+			<a class="btn-link" href="menu.html">View customer menu</a>
+		</div>
+	</header>
+
+	<main class="hidden">
+		<div class="search-row">
+			<input id="search" type="search" placeholder="Search by name or subcategory" />
+		</div>
+		<div class="categories" id="categories"></div>
+		<section class="list" id="list"></section>
+	</main>
+
+	<script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+		import { getFirestore, collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+		import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+		const firebaseConfig = {
+			apiKey: "AIzaSyCS1WJJQ7QQnqRhtwuTQCPpjjb3tIjQ3nQ",
+			authDomain: "ruchi-53a14.firebaseapp.com",
+			projectId: "ruchi-53a14",
+			storageBucket: "ruchi-53a14.firebasestorage.app",
+			messagingSenderId: "473906899822",
+			appId: "1:473906899822:web:07640feeca4e379aaa6f7f",
+			measurementId: "G-J1CQDC048C"
+		};
+
+		const app = initializeApp(firebaseConfig);
+		const db = getFirestore(app);
+		const auth = getAuth(app);
+
+		const categoriesEl = document.getElementById("categories");
+		const listEl = document.getElementById("list");
+		const searchInput = document.getElementById("search");
+		const mainEl = document.querySelector("main");
+
+		let menuItems = [];
+		let selectedCategory = "All";
+		let authed = false;
+		const allowedEmail = "shubhakumarvel@gmail.com";
+
+		const uniqueCategories = () => {
+			const set = new Set(["All"]);
+			menuItems.forEach((i) => { if (i.category) set.add(i.category); });
+			return Array.from(set).sort();
+		};
+
+		const renderCategories = () => {
+			categoriesEl.innerHTML = "";
+			uniqueCategories().forEach((cat) => {
+				const btn = document.createElement("button");
+				btn.className = "cat-btn";
+				btn.textContent = cat;
+				btn.classList.toggle("active", cat === selectedCategory);
+				btn.addEventListener("click", () => {
+					selectedCategory = cat;
+					renderCategories();
+					renderList();
+				});
+				categoriesEl.appendChild(btn);
+			});
+		};
+
+		const renderList = () => {
+			const term = (searchInput.value || "").toLowerCase().trim();
+			const filtered = menuItems.filter((i) => {
+				const inCat = selectedCategory === "All" ? true : (i.category || "") === selectedCategory;
+				const matches = !term || (i.name || "").toLowerCase().includes(term) || (i.subCategory || "").toLowerCase().includes(term);
+				return inCat && matches;
+			});
+			listEl.innerHTML = "";
+			if (!filtered.length) {
+				const empty = document.createElement("div");
+				empty.className = "empty";
+				empty.textContent = "No items match";
+				listEl.appendChild(empty);
+				return;
+			}
+			filtered.forEach((item) => {
+				const row = document.createElement("div");
+				row.className = "row";
+				const left = document.createElement("div");
+				const title = document.createElement("h3");
+				title.textContent = item.name || "Item";
+				const meta = document.createElement("div");
+				meta.className = "meta";
+				meta.textContent = [item.category, item.subCategory].filter(Boolean).join(" • ");
+				left.append(title, meta);
+
+				const price = document.createElement("div");
+				price.className = "price";
+				price.textContent = item.price ? `RM ${Number(item.price).toFixed(2)}` : "—";
+
+				const toggleWrap = document.createElement("label");
+				toggleWrap.className = "toggle-wrap";
+				const cb = document.createElement("input");
+				cb.type = "checkbox";
+				cb.checked = item.available !== false;
+				cb.addEventListener("change", async () => {
+					cb.disabled = true;
+					try {
+						await updateDoc(doc(db, "menuItems", item.id), { available: cb.checked });
+						row.querySelector(".status").textContent = cb.checked ? "Available" : "Hidden";
+					} catch (err) {
+						cb.checked = !cb.checked;
+						console.error("Update failed", err);
+					} finally {
+						cb.disabled = false;
+					}
+				});
+				const status = document.createElement("span");
+				status.className = "status";
+				status.textContent = cb.checked ? "Available" : "Hidden";
+				toggleWrap.append(cb, document.createTextNode("Show"));
+
+				row.append(left, price, toggleWrap);
+				row.appendChild(status);
+				listEl.appendChild(row);
+			});
+		};
+
+		const loadMenu = async () => {
+			try {
+				const snap = await getDocs(collection(db, "menuItems"));
+				menuItems = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+				renderCategories();
+				renderList();
+			} catch (err) {
+				listEl.innerHTML = "<div class=\"empty\">Menu unavailable</div>";
+				console.error("Failed to load menu", err);
+			}
+		};
+
+		const showMain = () => {
+			mainEl.classList.remove("hidden");
+		};
+
+		onAuthStateChanged(auth, (user) => {
+			if (user?.email === allowedEmail) {
+				if (!authed) {
+					authed = true;
+					showMain();
+					loadMenu();
+				}
+			} else {
+				authed = false;
+				mainEl.classList.add("hidden");
+				if (user) {
+					signOut(auth).catch(() => {});
+				}
+				window.location.href = "cashier.html";
+			}
+		});
+
+		searchInput.addEventListener("input", renderList);
+	</script>
+</body>
+</html>
