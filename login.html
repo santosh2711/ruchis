@@ -141,6 +141,10 @@
 
 		<button id="google-btn" class="button google" type="button">Continue with Google</button>
 
+		<div class="divider">or</div>
+
+		<button id="guest-btn" class="button" type="button">Continue as guest</button>
+
 		<div id="error"></div>
 		<div id="status" class="status"></div>
 		<div id="user-info" class="user-info" style="display:none;"></div>
@@ -176,6 +180,7 @@
 		const statusEl = document.getElementById("status");
 		const userInfoEl = document.getElementById("user-info");
 		const signOutBtn = document.getElementById("sign-out");
+		const guestBtn = document.getElementById("guest-btn");
 
 		let mode = "signin"; // or "signup"
 		let redirected = false;
@@ -206,6 +211,12 @@
 			} catch (err) {
 				showError(err?.message || "Google sign-in failed.", err?.code);
 			}
+		});
+
+		guestBtn.addEventListener("click", () => {
+			showError("");
+			showStatus("");
+			window.location.href = "menu.html";
 		});
 
 
