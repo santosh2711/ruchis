@@ -165,6 +165,35 @@
 			display: grid;
 			gap: 10px;
 		}
+		.cart-toggle {
+			position: fixed;
+			bottom: 10px;
+			right: 14px;
+			border: 1px solid var(--border);
+			background: #fff;
+			color: var(--black);
+			padding: 10px 12px;
+			border-radius: 999px;
+			font-weight: 800;
+			box-shadow: 0 10px 22px rgba(0,0,0,0.12);
+			cursor: pointer;
+			z-index: 120;
+		}
+		.send-options {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+			gap: 8px;
+		}
+		.send-options label {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 10px 12px;
+			border: 1px solid var(--border);
+			border-radius: 10px;
+			font-weight: 700;
+			background: #f8fafc;
+		}
 		.cart-header { display: flex; align-items: center; justify-content: space-between; }
 		.cart-header h4 { margin: 0; font-size: 16px; }
 		.cart-count { color: #475569; font-weight: 700; }
@@ -246,6 +275,10 @@
 			<div class="cart-count" id="cart-count">0 items</div>
 			<span class="edit-badge" id="editing-badge" style="display:none;">Editing order</span>
 		</div>
+		<div class="send-options">
+			<label><input id="send-kitchen" type="checkbox" checked /> Send to kitchen</label>
+			<label><input id="send-cashier" type="checkbox" checked /> Send to cashier</label>
+		</div>
 		<input id="order-note" class="note-input" placeholder="Order note (optional)" />
 		<div class="cart-list" id="cart-list"></div>
 		<div class="total-row">
@@ -254,6 +287,8 @@
 		</div>
 		<button id="send" class="send-btn" type="button">Send to counter</button>
 	</section>
+
+	<button id="cart-toggle" class="cart-toggle" type="button" style="display:none;">Hide cart</button>
 
 	<div class="toast" id="toast"></div>
 
@@ -287,6 +322,9 @@
 		const editingBadge = document.getElementById("editing-badge");
 		const searchInput = document.getElementById("search-input");
 		const searchBtn = document.getElementById("search-btn");
+		const sendKitchenToggle = document.getElementById("send-kitchen");
+		const sendCashierToggle = document.getElementById("send-cashier");
+		const cartToggle = document.getElementById("cart-toggle");
 
 		let menuItems = [];
 		let cart = [];
@@ -296,6 +334,7 @@
 		let activeOrderStatus = "unpaid";
 		let activeOrderUnsub = null;
 		let searchTerm = "";
+		let cartHidden = false;
 
 		const CART_KEY = (table) => `waiter_cart_table_${table || "default"}`;
 		const currency = (v) => `RM ${(Number(v) || 0).toFixed(2)}`;
@@ -304,6 +343,12 @@
 			toast.textContent = msg;
 			toast.classList.add("show");
 			setTimeout(() => toast.classList.remove("show"), 2000);
+		};
+
+		const updateCartToggleButton = (hasItems) => {
+			if (!cartToggle) return;
+			cartToggle.style.display = hasItems ? "inline-flex" : "none";
+			cartToggle.textContent = cartHidden ? "Show cart" : "Hide cart";
 		};
 
 		const setEditingBadge = (text) => {
@@ -345,6 +390,9 @@
 			setEditingBadge("");
 			searchTerm = "";
 			if (searchInput) searchInput.value = "";
+			if (sendKitchenToggle) sendKitchenToggle.checked = true;
+			if (sendCashierToggle) sendCashierToggle.checked = true;
+			cartHidden = false;
 			cart = loadCart(currentTable);
 			renderCart();
 			renderCategories();
@@ -487,7 +535,9 @@
 			cartList.innerHTML = "";
 			const hasTable = !!currentTable;
 			const hasItems = cart.length > 0;
-			cartSheet.style.display = hasTable && hasItems ? "grid" : "none";
+			const showCart = hasTable && hasItems && !cartHidden;
+			cartSheet.style.display = showCart ? "grid" : "none";
+			updateCartToggleButton(hasItems);
 			cartCount.textContent = `${cart.length || 0} items`;
 			const total = cart.reduce((sum, i) => sum + (i.price || 0) * (i.qty || 0), 0);
 			totalEl.textContent = currency(total);
@@ -563,6 +613,8 @@
 				const payment = (data.paymentStatus || "unpaid").toLowerCase();
 				const orderState = (data.orderStatus || "").toLowerCase();
 				if (payment === "paid" || orderState === "cancelled") return;
+				if (sendKitchenToggle) sendKitchenToggle.checked = data.sentToKitchen !== undefined ? !!data.sentToKitchen : true;
+				if (sendCashierToggle) sendCashierToggle.checked = data.sendToCashier !== undefined ? !!data.sendToCashier : true;
 				activeOrderId = docSnap.id;
 				activeOrderStatus = payment;
 				setEditingBadge(`Editing order ${docSnap.id.slice(0, 6)}…`);
@@ -610,10 +662,18 @@
 			if (e.key === "Enter") applySearch();
 		});
 
+		cartToggle?.addEventListener("click", () => {
+			cartHidden = !cartHidden;
+			renderCart();
+		});
+
 		sendBtn.addEventListener("click", async () => {
 			const table = (tableInput.value || "").trim();
 			if (!table) { showToast("Pick a table first"); return; }
 			if (!cart.length) return;
+			const kitchenSelected = sendKitchenToggle ? !!sendKitchenToggle.checked : true;
+			const cashierSelected = sendCashierToggle ? !!sendCashierToggle.checked : true;
+			if (!kitchenSelected && !cashierSelected) { showToast("Select kitchen or cashier"); return; }
 			sendBtn.disabled = true;
 			sendBtn.textContent = activeOrderId ? "Updating..." : "Sending...";
 			try {
@@ -627,7 +687,8 @@
 					notes: (orderNote.value || "").trim(),
 					totalPrice,
 					paymentStatus: "unpaid",
-					sentToKitchen: false
+					sentToKitchen: kitchenSelected,
+					sendToCashier: cashierSelected
 				};
 
 				if (activeOrderId) {
