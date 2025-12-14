@@ -10,7 +10,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyCS1WJJQ7QQnqRhtwuTQCPpjjb3tIjQ3nQ",
     authDomain: "ruchi-53a14.firebaseapp.com",
     projectId: "ruchi-53a14",
-    storageBucket: "ruchi-53a14.appspot.com",
+    storageBucket: "ruchi-53a14.firebasestorage.app",
     messagingSenderId: "473906899822",
     appId: "1:473906899822:web:07640feeca4e379aaa6f7f",
     measurementId: "G-J1CQDC048C"
@@ -189,18 +189,24 @@ const renderCombined = (newIds) => {
     updatedAtEl.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
 };
 
-// Listen for in-kitchen orders
-const listenInKitchen = () => {
+// Listen for orders flagged for kitchen
+const listenKitchenFlag = () => {
     const q = query(
         collection(db, "orders"),
-        where("orderStatus", "==", "in-kitchen")
+        where("sentToKitchen", "==", true)
     );
 
     onSnapshot(q, (snapshot) => {
         const newIds = new Set();
         snapshot.docs.forEach((docSnap) => {
             const data = docSnap.data();
-            const order = { ...data, id: docSnap.id, createdAt: data.createdAt || data.timestamp };
+            const status = (data.orderStatus || "in-kitchen").toLowerCase();
+            const order = {
+                ...data,
+                id: docSnap.id,
+                orderStatus: status,
+                createdAt: data.createdAt || data.timestamp
+            };
             if (!seenInKitchen.has(docSnap.id)) {
                 newIds.add(docSnap.id);
                 seenInKitchen.add(docSnap.id);
@@ -210,29 +216,9 @@ const listenInKitchen = () => {
         renderCombined(newIds);
         if (newIds.size) playNotify();
     }, (error) => {
-        console.error("listenInKitchen error", error);
+        console.error("listenKitchenFlag error", error);
     });
 };
 
-// Listen for ready orders (keep them blurred but visible)
-const listenReady = () => {
-    const q = query(
-        collection(db, "orders"),
-        where("orderStatus", "==", "ready")
-    );
-
-    onSnapshot(q, (snapshot) => {
-        snapshot.docs.forEach((docSnap) => {
-            const data = docSnap.data();
-            const order = { ...data, id: docSnap.id, createdAt: data.createdAt || data.timestamp };
-            orderMap.set(docSnap.id, order);
-        });
-        renderCombined(new Set());
-    }, (error) => {
-        console.error("listenReady error", error);
-    });
-};
-
-// Kick off listeners
-listenInKitchen();
-listenReady();
+// Kick off listener
+listenKitchenFlag();
