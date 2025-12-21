@@ -219,9 +219,10 @@
 			z-index: 115;
 			background: #ffffff;
 			padding: 8px 0;
-			margin: 0 0 10px;
+			margin: 0 0 12px;
 			display: flex;
-			gap: 8px;
+			flex-wrap: wrap;
+			gap: 10px;
 			align-items: center;
 		}
 
@@ -584,20 +585,70 @@
 		}
 
 		.filter-btn {
-			border: 1px solid var(--border);
-			background: #ffffff;
-			color: var(--black);
-			padding: 10px 12px;
-			border-radius: 10px;
-			font-weight: 700;
-			cursor: pointer;
-			transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+			border: none;
+			background: transparent;
+			padding: 0;
 		}
 
-		.filter-btn.active {
-			background: #dcfce7;
-			border-color: #22c55e;
-			color: #166534;
+		.switch-btn {
+			position: relative;
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
+			padding: 6px 10px;
+			border-radius: 14px;
+			border: 1px solid var(--border);
+			background: #fff;
+			font-weight: 800;
+			color: var(--black);
+			cursor: pointer;
+			transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+			min-width: 148px;
+		}
+
+		.switch-btn .switch-track {
+			position: relative;
+			width: 54px;
+			height: 28px;
+			border-radius: 999px;
+			background: #e2e8f0;
+			border: 1px solid #cbd5e1;
+			transition: background 0.2s ease, border-color 0.2s ease;
+			flex-shrink: 0;
+		}
+
+		.switch-btn .switch-thumb {
+			position: absolute;
+			top: 3px;
+			left: 3px;
+			width: 22px;
+			height: 22px;
+			border-radius: 50%;
+			background: #ffffff;
+			box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+			transition: transform 0.2s ease, background 0.2s ease;
+		}
+
+		.switch-btn .switch-label {
+			font-size: 13px;
+			color: #334155;
+			white-space: nowrap;
+		}
+
+		.switch-btn.switch-on {
+			border-color: #fb923c;
+			background: #fff7ed;
+			box-shadow: 0 6px 14px rgba(249, 115, 22, 0.18);
+		}
+
+		.switch-btn.switch-on .switch-track {
+			background: #fb923c;
+			border-color: #f97316;
+		}
+
+		.switch-btn.switch-on .switch-thumb {
+			transform: translateX(26px);
+			background: #fff;
 		}
 
 		.item-desc {
@@ -661,6 +712,41 @@
 				align-items: center;
 				gap: 8px;
 			}
+
+			.search-input {
+				font-size: 13px;
+			}
+
+			.switch-btn {
+				padding: 6px 8px;
+				gap: 8px;
+				min-width: 138px;
+			}
+
+			.switch-btn .switch-label {
+				font-size: 12px;
+			}
+
+			.category-pill-btn {
+				font-size: 13px;
+				padding: 7px 10px;
+			}
+
+			.item-name {
+				font-size: 15px;
+			}
+
+			.price {
+				font-size: 14px;
+			}
+
+			.item-desc {
+				font-size: 13px;
+			}
+
+			.badge {
+				font-size: 11px;
+			}
 		}
 
 		.empty {
@@ -711,8 +797,18 @@
 		</div>
 		<div class="search-bar" id="search-bar" style="display:none;">
 			<input class="search-input" id="menu-search" type="search" placeholder="Search menu..." aria-label="Search menu" />
-			<button class="filter-btn" id="veg-toggle" type="button">Veg filter off</button>
-			<button class="filter-btn" id="available-toggle" type="button">Show all items</button>
+			<button class="filter-btn switch-btn" id="veg-toggle" type="button" aria-pressed="false">
+				<span class="switch-track" aria-hidden="true">
+					<span class="switch-thumb"></span>
+				</span>
+				<span class="switch-label">Veg filter off</span>
+			</button>
+			<button class="filter-btn switch-btn" id="available-toggle" type="button" aria-pressed="false">
+				<span class="switch-track" aria-hidden="true">
+					<span class="switch-thumb"></span>
+				</span>
+				<span class="switch-label">Available now</span>
+			</button>
 		</div>
 		<div class="category-nav" id="category-nav" style="display:none;">
 			<div class="category-nav-inner" id="category-nav-inner"></div>
@@ -830,7 +926,7 @@
 		const CATEGORY_MAP = {
 			Breakfast: ["Chapati", "Dosa", "Egg Options", "Idly", "Nasi Lemak", "Roti Canai", "Roti Varieties"],
 			Lunch: ["Add On", "Banana Leaf", "Banana Leaf Meal", "Briyani", "Biryani", "Chapati", "Chicken Options", "Claypot", "Egg Options", "Mutton Options", "Seafood Options"],
-			Dinner: ["Chapati", "Claypot", "Dosa", "Egg Options", "Finger Foods", "Goreng", "Nasi Lemak", "Parotta", "Rolls", "Roti Canai", "Roti Varieties", "Sandwich", "Special Chicken"],
+			Dinner: ["Chapati", "Claypot", "Dosa", "Egg Options", "Finger Foods", "Goreng", "Nasi Lemak", "Parotta", "Rolls", "Roti Canai", "Roti Varieties", "Sandwich", "Chicken Special"],
 			Drinks: ["Coffee", "Juices", "Lassi", "Milk Drinks", "Tea"],
 		};
 
@@ -852,10 +948,25 @@
 			return hour * 60 + minute;
 		};
 
+		const formatMinutesTo12h = (totalMinutes = 0) => {
+			const minutes = Math.max(0, totalMinutes);
+			const hour24 = Math.floor(minutes / 60) % 24;
+			const minute = minutes % 60;
+			const suffix = hour24 >= 12 ? "PM" : "AM";
+			const hour12 = hour24 % 12 || 12;
+			return `${hour12}:${minute.toString().padStart(2, "0")} ${suffix}`;
+		};
+
+		const makeWindow = (startStr, endStr) => {
+			const start = timeStringToMinutes(startStr);
+			const end = timeStringToMinutes(endStr);
+			return { start, end, label: `${formatMinutesTo12h(start)} - ${formatMinutesTo12h(end)}` };
+		};
+
 		const TIME_WINDOWS = {
-			Breakfast: { start: timeStringToMinutes("07:00"), end: timeStringToMinutes("11:30"), label: "07:00-11:30" },
-			Lunch: { start: timeStringToMinutes("11:30"), end: timeStringToMinutes("16:00"), label: "11:30-16:00" },
-			Dinner: { start: timeStringToMinutes("16:00"), end: timeStringToMinutes("22:00"), label: "16:00-22:00" },
+			Breakfast: makeWindow("07:00", "11:30"),
+			Lunch: makeWindow("11:30", "16:00"),
+			Dinner: makeWindow("16:00", "22:00"),
 		};
 
 		const getMainCategoryForTime = (minutes) => {
@@ -1387,20 +1498,22 @@
 			}
 		};
 
+		const setSwitchState = (btn, on, onLabel, offLabel) => {
+			if (!btn) return;
+			const labelEl = btn.querySelector(".switch-label");
+			if (labelEl) labelEl.textContent = on ? onLabel : offLabel;
+			btn.classList.toggle("switch-on", on);
+			btn.setAttribute("aria-pressed", String(on));
+		};
+
 		const applyVegToggleState = () => {
 			vegOnly = localStorage.getItem(vegPrefKey) === "1";
-			if (vegToggle) {
-				vegToggle.classList.toggle("active", vegOnly);
-				vegToggle.textContent = vegOnly ? "Veg filter on" : "Veg filter off";
-			}
+			setSwitchState(vegToggle, vegOnly, "Veg filter on", "Veg filter off");
 		};
 
 		const applyAvailableToggleState = () => {
 			availableOnly = localStorage.getItem(availablePrefKey) === "1";
-			if (availableToggle) {
-				availableToggle.classList.toggle("active", availableOnly);
-				availableToggle.textContent = availableOnly ? "Available now" : "Show all items";
-			}
+			setSwitchState(availableToggle, availableOnly, "Available now", "Available now");
 		};
 
 		const filteredItems = () => {
