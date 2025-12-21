@@ -68,6 +68,19 @@
 		main { max-width: 960px; margin: 0 auto; padding: 0 16px; }
 
 		.quick-row { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0 6px; margin-bottom: 4px; }
+		.main-nav { display: flex; gap: 8px; overflow-x: auto; padding: 6px 0 8px; margin-bottom: 6px; }
+		.main-pill {
+			border: 1px solid var(--border);
+			background: #fff;
+			color: var(--black);
+			padding: 9px 12px;
+			border-radius: 999px;
+			font-weight: 800;
+			cursor: pointer;
+			white-space: nowrap;
+			transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+		}
+		.main-pill.active { background: #fff7ed; border-color: var(--orange); color: var(--orange-dark); }
 		.search-row {
 			display: flex;
 			gap: 8px;
@@ -139,13 +152,24 @@
 			background: #ffffff;
 			box-shadow: 0 8px 18px rgba(0,0,0,0.06);
 			display: grid;
-			gap: 8px;
+			grid-template-columns: 80px 1fr;
+			grid-template-rows: auto auto;
+			gap: 8px 10px;
+			align-items: center;
 		}
+		.card .thumb {
+			width: 80px;
+			height: 80px;
+			border-radius: 10px;
+			object-fit: cover;
+			background: var(--gray);
+		}
+		.card-info { display: flex; flex-direction: column; gap: 4px; }
 		.card h3 { margin: 0; font-size: 16px; font-weight: 800; color: var(--black); }
 		.card .meta { margin: 0; color: #475569; font-weight: 600; font-size: 13px; }
 		.card .price { font-weight: 800; color: var(--orange-dark); }
 
-		.controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+		.controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; grid-column: 2 / 3; }
 		.qty-controls { display: inline-flex; align-items: center; gap: 10px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--gray); }
 		.qty-btn { width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--orange); color: #fff; font-weight: 800; cursor: pointer; }
 		.qty-val { min-width: 24px; text-align: center; font-weight: 800; }
@@ -237,7 +261,14 @@
 			.search-row { margin: 4px 0 8px; gap: 6px; }
 			.search-input { padding: 9px 10px; font-size: 13px; }
 			.search-btn { padding: 10px 12px; }
-			.categories { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+			.categories { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+			.cat-btn {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				aspect-ratio: 1 / 1;
+				padding: 0;
+			}
 			.menu-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
 			.card { padding: 10px; }
 			.cart-sheet { max-height: 70vh; padding: 10px 12px 14px; }
@@ -260,6 +291,7 @@
 
 	<main>
 		<div class="quick-row" id="quick-row"></div>
+		<div class="main-nav" id="main-nav"></div>
 		<div class="search-row">
 			<input id="search-input" class="search-input" type="search" placeholder="Search items" />
 			<button id="search-btn" class="search-btn" type="button">Search</button>
@@ -277,7 +309,7 @@
 		</div>
 		<div class="send-options">
 			<label><input id="send-kitchen" type="checkbox" checked /> Send to kitchen</label>
-			<label><input id="send-cashier" type="checkbox" checked /> Send to cashier</label>
+			<label class="locked">Send to cashier (always on)</label>
 		</div>
 		<input id="order-note" class="note-input" placeholder="Order note (optional)" />
 		<div class="cart-list" id="cart-list"></div>
@@ -310,6 +342,7 @@
 		const db = getFirestore(app);
 
 		const categoriesEl = document.getElementById("categories");
+		const mainNav = document.getElementById("main-nav");
 		const itemsPanel = document.getElementById("items-panel");
 		const tableInput = document.getElementById("table-input");
 		const quickRow = document.getElementById("quick-row");
@@ -323,13 +356,13 @@
 		const searchInput = document.getElementById("search-input");
 		const searchBtn = document.getElementById("search-btn");
 		const sendKitchenToggle = document.getElementById("send-kitchen");
-		const sendCashierToggle = document.getElementById("send-cashier");
 		const cartToggle = document.getElementById("cart-toggle");
 
 		let menuItems = [];
 		let cart = [];
 		let currentTable = new URLSearchParams(window.location.search).get("table") || "";
 		let selectedCategory = "";
+		let activeMain = "All";
 		let activeOrderId = null;
 		let activeOrderStatus = "unpaid";
 		let activeOrderUnsub = null;
@@ -337,6 +370,46 @@
 		let cartHidden = false;
 
 		const CART_KEY = (table) => `waiter_cart_table_${table || "default"}`;
+
+		const CATEGORY_MAP = {
+			Breakfast: ["Chapati", "Dosa", "Egg Options", "Idly", "Nasi Lemak", "Roti Canai", "Roti Varieties"],
+			Lunch: ["Add On", "Banana Leaf", "Banana Leaf Meal", "Briyani", "Biryani", "Chapati", "Chicken Options", "Claypot", "Egg Options", "Mutton Options", "Seafood Options"],
+			Dinner: ["Chapati", "Claypot", "Dosa", "Egg Options", "Finger Foods", "Goreng", "Nasi Lemak", "Parotta", "Rolls", "Roti Canai", "Roti Varieties", "Sandwich", "Special Chicken"],
+			Drinks: ["Coffee", "Juices", "Lassi", "Milk Drinks", "Tea"],
+		};
+
+		const MAIN_CATEGORIES = ["All", "Breakfast", "Lunch", "Dinner", "Drinks"];
+		const SUBCATEGORY_ORDER = {
+			All: ["Banana Leaf", "Banana Leaf Meal", "Claypot", "Briyani", "Biryani"],
+			Lunch: ["Banana Leaf", "Banana Leaf Meal", "Claypot", "Briyani", "Biryani"],
+		};
+
+		const subToMain = (() => {
+			const map = {};
+			Object.entries(CATEGORY_MAP).forEach(([main, subs]) => {
+				subs.forEach((sub) => {
+					const key = (sub || "").toLowerCase();
+					if (!map[key]) map[key] = [];
+					map[key].push(main);
+				});
+			});
+			return map;
+		})();
+
+		const normalizeSubcategory = (raw) => {
+			const cleaned = (raw || "").trim();
+			if (!cleaned) return "General";
+			const lower = cleaned.toLowerCase();
+			if (lower === "others" || lower === "other") return "General";
+			return cleaned;
+		};
+
+		const itemMatchesMain = (item, main) => {
+			if (main === "All") return true;
+			const sub = normalizeSubcategory(item?.category || "");
+			const mains = subToMain[sub.toLowerCase()] || [];
+			return mains.includes(main);
+		};
 		const currency = (v) => `RM ${(Number(v) || 0).toFixed(2)}`;
 
 		const showToast = (msg) => {
@@ -391,10 +464,10 @@
 			searchTerm = "";
 			if (searchInput) searchInput.value = "";
 			if (sendKitchenToggle) sendKitchenToggle.checked = true;
-			if (sendCashierToggle) sendCashierToggle.checked = true;
 			cartHidden = false;
 			cart = loadCart(currentTable);
 			renderCart();
+			buildMainNav();
 			renderCategories();
 			renderItems();
 			quickRow.querySelectorAll(".quick-btn").forEach((btn) => {
@@ -415,8 +488,22 @@
 
 		const uniqueCategories = () => {
 			const set = new Set();
-			menuItems.forEach((i) => { if (i.category) set.add(i.category); });
-			return Array.from(set).sort();
+			menuItems.forEach((i) => {
+				if (!itemMatchesMain(i, activeMain)) return;
+				if (i.category) set.add(normalizeSubcategory(i.category));
+			});
+			const cats = Array.from(set);
+			const order = SUBCATEGORY_ORDER[activeMain] || [];
+			const rank = (label) => {
+				const idx = order.findIndex((v) => v.toLowerCase() === (label || "").toLowerCase());
+				return idx === -1 ? Number.POSITIVE_INFINITY : idx;
+			};
+			return cats.sort((a, b) => {
+				const ra = rank(a);
+				const rb = rank(b);
+				if (ra !== rb) return ra - rb;
+				return a.localeCompare(b, "en", { sensitivity: "base" });
+			});
 		};
 
 		const renderCategories = () => {
@@ -459,9 +546,10 @@
 				return;
 			}
 			const list = menuItems.filter((i) => {
-				const matchesCategory = (i.category || "") === selectedCategory;
+				const matchesMain = itemMatchesMain(i, activeMain);
+				const matchesCategory = normalizeSubcategory(i.category) === selectedCategory;
 				const matchesSearch = !searchTerm || (i.name || "").toLowerCase().includes(searchTerm);
-				return matchesCategory && matchesSearch;
+				return matchesMain && matchesCategory && matchesSearch;
 			});
 			if (!list.length) {
 				const empty = document.createElement("div");
@@ -476,11 +564,22 @@
 				const card = document.createElement("article");
 				card.className = "card";
 				card.tabIndex = 0;
+
+				const img = document.createElement("img");
+				img.className = "thumb";
+				img.src = item.image || item.imageURL || "https://via.placeholder.com/120x120?text=No+Image";
+				img.alt = item.name || "Item";
+				img.loading = "lazy";
+				img.decoding = "async";
+
+				const info = document.createElement("div");
+				info.className = "card-info";
 				const title = document.createElement("h3");
 				title.textContent = item.name || "Item";
 				const price = document.createElement("div");
 				price.className = "price";
 				price.textContent = currency(item.price);
+				info.append(title, price);
 
 				card.addEventListener("click", () => updateCart(item, 1));
 				card.addEventListener("keypress", (e) => { if (e.key === "Enter" || e.key === " ") updateCart(item, 1); });
@@ -511,7 +610,8 @@
 					add.addEventListener("click", (e) => { e.stopPropagation(); updateCart(item, 1); });
 					controls.appendChild(add);
 				}
-				card.append(title, price, controls);
+
+				card.append(img, info, controls);
 				grid.appendChild(card);
 			});
 			itemsPanel.appendChild(grid);
@@ -584,10 +684,30 @@
 			cartList.appendChild(frag);
 		};
 
+		const buildMainNav = () => {
+			if (!mainNav) return;
+			mainNav.innerHTML = "";
+			MAIN_CATEGORIES.forEach((main) => {
+				const btn = document.createElement("button");
+				btn.className = "main-pill";
+				btn.textContent = main;
+				btn.classList.toggle("active", main === activeMain);
+				btn.addEventListener("click", () => {
+					activeMain = main;
+					selectedCategory = "";
+					buildMainNav();
+					renderCategories();
+					renderItems();
+				});
+				mainNav.appendChild(btn);
+			});
+		};
+
 		const fetchMenu = async () => {
 			try {
 				const snap = await getDocs(collection(db, "menuItems"));
 				menuItems = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+				buildMainNav();
 				renderCategories();
 				renderItems();
 			} catch (err) {
@@ -614,7 +734,6 @@
 				const orderState = (data.orderStatus || "").toLowerCase();
 				if (payment === "paid" || orderState === "cancelled") return;
 				if (sendKitchenToggle) sendKitchenToggle.checked = data.sentToKitchen !== undefined ? !!data.sentToKitchen : true;
-				if (sendCashierToggle) sendCashierToggle.checked = data.sendToCashier !== undefined ? !!data.sendToCashier : true;
 				activeOrderId = docSnap.id;
 				activeOrderStatus = payment;
 				setEditingBadge(`Editing order ${docSnap.id.slice(0, 6)}…`);
@@ -672,7 +791,7 @@
 			if (!table) { showToast("Pick a table first"); return; }
 			if (!cart.length) return;
 			const kitchenSelected = sendKitchenToggle ? !!sendKitchenToggle.checked : true;
-			const cashierSelected = sendCashierToggle ? !!sendCashierToggle.checked : true;
+			const cashierSelected = true;
 			if (!kitchenSelected && !cashierSelected) { showToast("Select kitchen or cashier"); return; }
 			sendBtn.disabled = true;
 			sendBtn.textContent = activeOrderId ? "Updating..." : "Sending...";
