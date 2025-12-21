@@ -712,6 +712,7 @@
 		<div class="search-bar" id="search-bar" style="display:none;">
 			<input class="search-input" id="menu-search" type="search" placeholder="Search menu..." aria-label="Search menu" />
 			<button class="filter-btn" id="veg-toggle" type="button">Veg filter off</button>
+			<button class="filter-btn" id="available-toggle" type="button">Show all items</button>
 		</div>
 		<div class="category-nav" id="category-nav" style="display:none;">
 			<div class="category-nav-inner" id="category-nav-inner"></div>
@@ -804,6 +805,7 @@
 		const searchBar = document.getElementById("search-bar");
 		const searchInput = document.getElementById("menu-search");
 		const vegToggle = document.getElementById("veg-toggle");
+		const availableToggle = document.getElementById("available-toggle");
 		const viewCategoriesBtn = document.getElementById("view-categories");
 		const subNav = document.getElementById("sub-nav");
 		const subNavInner = document.getElementById("sub-nav-inner");
@@ -812,9 +814,13 @@
 		let allItems = [];
 		let profileOpen = false;
 		let vegOnly = false;
+		let availableOnly = false;
 		let activeMain = "All";
+		let autoMainSet = false;
+		let mainManuallySelected = false;
 		let subNavVisible = false;
 		let menuUnsub = null;
+		let scheduleIntervalId = null;
 
 		const urlParams = new URLSearchParams(window.location.search);
 		const tableNumber = urlParams.get("table") || "1";
@@ -822,13 +828,44 @@
 		const serviceKey = `service_choice_table${tableNumber}`;
 
 		const CATEGORY_MAP = {
-			Breakfast: ["Chapati", "Dosa", "Idly", "Poori", "Tea"],
-			Lunch: ["Chicken Special", "Claypot", "Goreng", "Noodles", "Rolls", "Sandwich"],
-			Dinner: ["Chicken Special", "Claypot", "Goreng", "Noodles", "Rolls", "Sandwich"],
-			Drinks: ["Coffee", "Juices", "Lassi", "Milk Drinks"],
+			Breakfast: ["Chapati", "Dosa", "Egg Options", "Idly", "Nasi Lemak", "Roti Canai", "Roti Varieties"],
+			Lunch: ["Add On", "Banana Leaf", "Banana Leaf Meal", "Briyani", "Biryani", "Chapati", "Chicken Options", "Claypot", "Egg Options", "Mutton Options", "Seafood Options"],
+			Dinner: ["Chapati", "Claypot", "Dosa", "Egg Options", "Finger Foods", "Goreng", "Nasi Lemak", "Parotta", "Rolls", "Roti Canai", "Roti Varieties", "Sandwich", "Special Chicken"],
+			Drinks: ["Coffee", "Juices", "Lassi", "Milk Drinks", "Tea"],
 		};
 
 		const MAIN_CATEGORIES = ["All", "Breakfast", "Lunch", "Dinner", "Drinks"];
+		const SUBCATEGORY_ORDER = {
+			All: ["Banana Leaf", "Banana Leaf Meal", "Claypot", "Briyani", "Biryani"],
+			Lunch: ["Banana Leaf", "Banana Leaf Meal", "Claypot", "Briyani", "Biryani"],
+		};
+		const MALAYSIA_TZ = "Asia/Kuala_Lumpur";
+		const timeStringToMinutes = (value = "00:00") => {
+			const [hourRaw, minuteRaw] = value.split(":");
+			return Number(hourRaw || 0) * 60 + Number(minuteRaw || 0);
+		};
+
+		const getMalaysiaMinutes = () => {
+			const parts = new Intl.DateTimeFormat("en-GB", { timeZone: MALAYSIA_TZ, hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date());
+			const hour = Number(parts.find((p) => p.type === "hour")?.value || 0);
+			const minute = Number(parts.find((p) => p.type === "minute")?.value || 0);
+			return hour * 60 + minute;
+		};
+
+		const TIME_WINDOWS = {
+			Breakfast: { start: timeStringToMinutes("07:00"), end: timeStringToMinutes("11:30"), label: "07:00-11:30" },
+			Lunch: { start: timeStringToMinutes("11:30"), end: timeStringToMinutes("16:00"), label: "11:30-16:00" },
+			Dinner: { start: timeStringToMinutes("16:00"), end: timeStringToMinutes("22:00"), label: "16:00-22:00" },
+		};
+
+		const getMainCategoryForTime = (minutes) => {
+			if (isWithinWindow(minutes, TIME_WINDOWS.Breakfast)) return "Breakfast";
+			if (isWithinWindow(minutes, TIME_WINDOWS.Lunch)) return "Lunch";
+			if (isWithinWindow(minutes, TIME_WINDOWS.Dinner)) return "Dinner";
+			return "Dinner";
+		};
+
+		const isWithinWindow = (minutes, window) => minutes >= window.start && minutes < window.end;
 		const subToMain = (() => {
 			const map = {};
 			Object.entries(CATEGORY_MAP).forEach(([main, subs]) => {
@@ -840,6 +877,49 @@
 			});
 			return map;
 		})();
+
+		const getSubcategoryWindows = (label) => {
+			const key = (label || "").trim().toLowerCase();
+			const mains = subToMain[key] || [];
+			if (mains.includes("Drinks")) return [];
+			const windows = mains.map((main) => TIME_WINDOWS[main]).filter(Boolean);
+			if (windows.length) return windows;
+			return Object.values(TIME_WINDOWS);
+		};
+
+		const isSubcategoryAvailableNow = (label, currentMinutes) => {
+			const windows = getSubcategoryWindows(label);
+			if (!windows.length) return true;
+			return windows.some((win) => isWithinWindow(currentMinutes, win));
+		};
+
+		const getSubcategoryWindowLabels = (label) => {
+			const windows = getSubcategoryWindows(label);
+			if (!windows.length) return null;
+			const seen = new Set();
+			const labels = [];
+			windows.forEach((win) => {
+				if (!win?.label || seen.has(win.label)) return;
+				seen.add(win.label);
+				labels.push(win.label);
+			});
+			return labels;
+		};
+
+		const getAvailabilityMessage = (label) => {
+			const labels = getSubcategoryWindowLabels(label);
+			if (!labels || !labels.length) return null;
+			return `Available ${labels.join(" / ")} (MYT)`;
+		};
+
+		const syncActiveMainWithTime = (currentMinutes = getMalaysiaMinutes()) => {
+			if (mainManuallySelected) return;
+			const inferred = getMainCategoryForTime(currentMinutes);
+			if (inferred && MAIN_CATEGORIES.includes(inferred)) {
+				activeMain = inferred;
+				autoMainSet = true;
+			}
+		};
 
 		tableNumberSpan.textContent = tableNumber;
 
@@ -865,6 +945,7 @@
 
 		const formatPrice = (value) => `RM ${Number(value || 0).toFixed(2)}`;
 		const vegPrefKey = `veg_only_filter_${tableNumber}`;
+		const availablePrefKey = `available_only_filter_${tableNumber}`;
 
 		const normalizeSubcategory = (raw) => {
 			const cleaned = (raw || "").trim();
@@ -1061,6 +1142,8 @@
 				return;
 			}
 
+			const nowMalaysiaMinutes = getMalaysiaMinutes();
+
 			const groupedByMain = { All: {} };
 			const pushItem = (mainKey, subKey, itm) => {
 				const main = MAIN_CATEGORIES.includes(mainKey) ? mainKey : activeMain;
@@ -1092,6 +1175,7 @@
 				btn.classList.toggle("active", main === activeMain);
 				btn.addEventListener("click", () => {
 					activeMain = main;
+					mainManuallySelected = true;
 					subNavVisible = false;
 					renderMenu(items);
 				});
@@ -1100,7 +1184,17 @@
 			categoryNavInner.appendChild(mainFrag);
 
 			const activeGroups = groupedByMain[activeMain] || {};
-			const subCategories = Object.keys(activeGroups).sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+			const subOrder = SUBCATEGORY_ORDER[activeMain] || [];
+			const rank = (label) => {
+				const idx = subOrder.findIndex((v) => v.toLowerCase() === (label || "").toLowerCase());
+				return idx === -1 ? Number.POSITIVE_INFINITY : idx;
+			};
+			const subCategories = Object.keys(activeGroups).sort((a, b) => {
+				const ra = rank(a);
+				const rb = rank(b);
+				if (ra !== rb) return ra - rb;
+				return a.localeCompare(b, "en", { sensitivity: "base" });
+			});
 			viewCategoriesBtn.style.display = subCategories.length ? "inline-flex" : "none";
 			viewCategoriesBtn.textContent = subNavVisible ? "Hide Categories" : "View Categories";
 			const sectionFrag = document.createDocumentFragment();
@@ -1115,7 +1209,7 @@
 				const section = document.createElement("section");
 				section.className = "category";
 				section.id = sectionId;
-					section.style.scrollMarginTop = `${getScrollOffset()}px`;
+				section.style.scrollMarginTop = `${getScrollOffset()}px`;
 
 				const title = document.createElement("h2");
 				title.className = "category-title";
@@ -1123,107 +1217,121 @@
 				section.appendChild(title);
 
 				itemsInSub.forEach((item) => {
-					const card = document.createElement("div");
-					card.className = "item-card";
+						const categoryLabel = subCat;
+						const timeWindows = getSubcategoryWindows(categoryLabel);
+						const timeBlocked = timeWindows.length > 0 && !isSubcategoryAvailableNow(categoryLabel, nowMalaysiaMinutes);
+						const card = document.createElement("div");
+						card.className = "item-card";
 
-					const img = document.createElement("img");
-					img.className = "item-image";
-					const imageSrc = item.image || item.imageURL || "https://via.placeholder.com/120x120?text=No+Image";
-					img.src = imageSrc;
-					img.alt = item.name || "Menu item";
-					img.loading = "lazy";
-					img.decoding = "async";
+						const img = document.createElement("img");
+						img.className = "item-image";
+						const imageSrc = item.image || item.imageURL || "https://via.placeholder.com/120x120?text=No+Image";
+						img.src = imageSrc;
+						img.alt = item.name || "Menu item";
+						img.loading = "lazy";
+						img.decoding = "async";
 
-					const info = document.createElement("div");
-					info.className = "item-info";
+						const info = document.createElement("div");
+						info.className = "item-info";
 
-					const topRow = document.createElement("div");
-					topRow.className = "item-top";
+						const topRow = document.createElement("div");
+						topRow.className = "item-top";
 
-					const nameEl = document.createElement("h3");
-					nameEl.className = "item-name";
-					nameEl.textContent = item.name || "Unnamed Item";
+						const nameEl = document.createElement("h3");
+						nameEl.className = "item-name";
+						nameEl.textContent = item.name || "Unnamed Item";
 
-					const vegBadge = document.createElement("span");
-					const isVeg = Boolean(item.veg);
-					vegBadge.className = `veg-dot ${isVeg ? "veg" : "non-veg"}`;
-					vegBadge.title = isVeg ? "Veg" : "Non-Veg";
+						const vegBadge = document.createElement("span");
+						const isVeg = Boolean(item.veg);
+						vegBadge.className = `veg-dot ${isVeg ? "veg" : "non-veg"}`;
+						vegBadge.title = isVeg ? "Veg" : "Non-Veg";
 
-					topRow.appendChild(vegBadge);
-					topRow.appendChild(nameEl);
+						topRow.appendChild(vegBadge);
+						topRow.appendChild(nameEl);
 
-					if (item.bestseller) {
-						const best = document.createElement("span");
-						best.className = "badge";
-						best.textContent = "🔥 Bestseller";
-						topRow.appendChild(best);
-					}
+						const mostOrdered = Boolean(item.bestseller) || categoryLabel.toLowerCase() === "banana leaf meal";
+						if (mostOrdered) {
+							const best = document.createElement("span");
+							best.className = "badge";
+							best.textContent = "Most ordered ★";
+							topRow.appendChild(best);
+						}
 
-					const desc = document.createElement("p");
-					desc.className = "item-desc";
-					desc.textContent = item.description || "Delicious item from our kitchen.";
+						const desc = document.createElement("p");
+						desc.className = "item-desc";
+						desc.textContent = item.description || "Delicious item from our kitchen.";
 
-					const bottomRow = document.createElement("div");
-					bottomRow.className = "item-bottom";
+						const bottomRow = document.createElement("div");
+						bottomRow.className = "item-bottom";
 
-					const price = document.createElement("div");
-					price.className = "price";
-					price.textContent = item.price !== undefined ? `RM ${Number(item.price).toFixed(2)}` : "Price on request";
+						const price = document.createElement("div");
+						price.className = "price";
+						price.textContent = item.price !== undefined ? `RM ${Number(item.price).toFixed(2)}` : "Price on request";
 
-					const unavailable = item.available === false;
-					if (unavailable) card.classList.add("unavailable");
+						const unavailable = item.available === false || timeBlocked;
+						if (availableOnly && unavailable) return;
+						if (unavailable) card.classList.add("unavailable");
 
-					const addBtn = document.createElement("button");
-					addBtn.className = "add-btn";
-					addBtn.type = "button";
-					addBtn.textContent = unavailable ? "Not available" : "Add";
-					addBtn.disabled = unavailable;
-					addBtn.addEventListener("click", (event) => {
-						event.stopPropagation();
-						if (unavailable) return;
-						animateToCart(img);
-						addToCart({
-							id: item.id,
-							name: item.name,
-							price: Number(item.price) || 0,
-							image: imageSrc,
+						const addBtn = document.createElement("button");
+						addBtn.className = "add-btn";
+						addBtn.type = "button";
+						addBtn.textContent = unavailable ? "Not available" : "Add";
+						addBtn.disabled = unavailable;
+						addBtn.addEventListener("click", (event) => {
+							event.stopPropagation();
+							if (unavailable) return;
+							animateToCart(img);
+							addToCart({
+								id: item.id,
+								name: item.name,
+								price: Number(item.price) || 0,
+								image: imageSrc,
+							});
 						});
+
+						card.style.cursor = unavailable ? "not-allowed" : "pointer";
+						card.addEventListener("click", () => {
+							if (unavailable) return;
+							const params = new URLSearchParams({
+								id: item.id,
+								name: item.name || "",
+								price: item.price !== undefined ? item.price : 0,
+								image: imageSrc,
+								category: item.category || "",
+								table: tableNumber,
+							});
+							window.location.href = `item.html?${params.toString()}`;
+						});
+
+						if (unavailable) {
+							const unavailableTag = document.createElement("span");
+							unavailableTag.className = "unavailable-badge";
+							const availability = getAvailabilityMessage(categoryLabel);
+							if (timeBlocked && availability) {
+								unavailableTag.textContent = availability;
+							} else if (timeBlocked) {
+								unavailableTag.textContent = "Available later today";
+							} else {
+								unavailableTag.textContent = "Not available";
+							}
+							bottomRow.appendChild(unavailableTag);
+						}
+						bottomRow.appendChild(price);
+						bottomRow.appendChild(addBtn);
+
+						info.appendChild(topRow);
+						info.appendChild(desc);
+						info.appendChild(bottomRow);
+
+						card.appendChild(img);
+						card.appendChild(info);
+
+						section.appendChild(card);
 					});
 
-					card.style.cursor = unavailable ? "not-allowed" : "pointer";
-					card.addEventListener("click", () => {
-						if (unavailable) return;
-						const params = new URLSearchParams({
-							id: item.id,
-							name: item.name || "",
-							price: item.price !== undefined ? item.price : 0,
-							image: imageSrc,
-							category: item.category || "",
-							table: tableNumber,
-						});
-						window.location.href = `item.html?${params.toString()}`;
-					});
-
-					if (unavailable) {
-						const unavailableTag = document.createElement("span");
-						unavailableTag.className = "unavailable-badge";
-						unavailableTag.textContent = "Not available";
-						bottomRow.appendChild(unavailableTag);
-					}
-					bottomRow.appendChild(price);
-					bottomRow.appendChild(addBtn);
-
-					info.appendChild(topRow);
-					info.appendChild(desc);
-					info.appendChild(bottomRow);
-
-					card.appendChild(img);
-					card.appendChild(info);
-
-					section.appendChild(card);
-				});
-
-				sectionFrag.appendChild(section);
+				if (section.querySelector(".item-card")) {
+					sectionFrag.appendChild(section);
+				}
 			});
 
 			menuContainer.appendChild(sectionFrag);
@@ -1287,6 +1395,14 @@
 			}
 		};
 
+		const applyAvailableToggleState = () => {
+			availableOnly = localStorage.getItem(availablePrefKey) === "1";
+			if (availableToggle) {
+				availableToggle.classList.toggle("active", availableOnly);
+				availableToggle.textContent = availableOnly ? "Available now" : "Show all items";
+			}
+		};
+
 		const filteredItems = () => {
 			const term = (searchInput.value || "").trim().toLowerCase();
 			return allItems.filter((item) => {
@@ -1304,10 +1420,19 @@
 			if (menuUnsub) menuUnsub();
 			menuUnsub = onSnapshot(collection(db, "menuItems"), (snap) => {
 				allItems = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+				const nowMinutes = getMalaysiaMinutes();
 				applyVegToggleState();
+				applyAvailableToggleState();
+				syncActiveMainWithTime(nowMinutes);
 				renderMenu(filteredItems());
 				searchBar.style.display = "flex";
 				loadingEl.classList.remove("active");
+				if (!scheduleIntervalId) {
+					scheduleIntervalId = setInterval(() => {
+						syncActiveMainWithTime(getMalaysiaMinutes());
+						renderMenu(filteredItems());
+					}, 60000);
+				}
 			}, (error) => {
 				loadingEl.classList.remove("active");
 				console.error("Error loading menu", error);
@@ -1399,6 +1524,13 @@
 			vegOnly = !vegOnly;
 			localStorage.setItem(vegPrefKey, vegOnly ? "1" : "0");
 			applyVegToggleState();
+			renderMenu(filteredItems());
+		});
+
+		availableToggle?.addEventListener("click", () => {
+			availableOnly = !availableOnly;
+			localStorage.setItem(availablePrefKey, availableOnly ? "1" : "0");
+			applyAvailableToggleState();
 			renderMenu(filteredItems());
 		});
 
