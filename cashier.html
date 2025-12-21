@@ -58,6 +58,30 @@
 
 		main { max-width: 1200px; margin: 0 auto; display: grid; gap: 16px; }
 
+		.category-nav {
+			display: flex;
+			gap: 8px;
+			flex-wrap: wrap;
+			margin: 4px 0 12px;
+		}
+
+		.category-pill {
+			border: 1px solid var(--border);
+			background: #fff;
+			color: var(--black);
+			padding: 8px 12px;
+			border-radius: 999px;
+			font-weight: 800;
+			cursor: pointer;
+			transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+		}
+
+		.category-pill.active {
+			background: #fff7ed;
+			border-color: var(--orange);
+			color: var(--orange-dark);
+		}
+
 		.section {
 			background: var(--card);
 			border: 1px solid var(--border);
@@ -229,6 +253,7 @@
 	<main>
 		<section class="section">
 			<h2>Orders</h2>
+			<div class="category-nav" id="category-nav"></div>
 			<div id="orders-list" class="orders"></div>
 		</section>
 	</main>
@@ -271,6 +296,7 @@
 		// DOM references
 		const ordersList = document.getElementById("orders-list");
 		const lastUpdated = document.getElementById("last-updated");
+		const categoryNav = document.getElementById("category-nav");
 		const authOverlay = document.getElementById("auth-overlay");
 		const authEmail = document.getElementById("auth-email");
 		const authPassword = document.getElementById("auth-password");
@@ -282,6 +308,49 @@
 		const allowedEmail = "shubhakumarvel@gmail.com"; // TODO: replace with the real cashier email
 		authEmail.value = allowedEmail;
 		authEmail.readOnly = true;
+
+		// Category mapping (mirrors menu page, no time windows)
+		const CATEGORY_MAP = {
+			Breakfast: ["Chapati", "Dosa", "Egg Options", "Idly", "Nasi Lemak", "Roti Canai", "Roti Varieties"],
+			Lunch: ["Add On", "Banana Leaf", "Banana Leaf Meal", "Briyani", "Biryani", "Chapati", "Chicken Options", "Claypot", "Egg Options", "Mutton Options", "Seafood Options"],
+			Dinner: ["Chapati", "Claypot", "Dosa", "Egg Options", "Finger Foods", "Goreng", "Nasi Lemak", "Parotta", "Rolls", "Roti Canai", "Roti Varieties", "Sandwich", "Special Chicken"],
+			Drinks: ["Coffee", "Juices", "Lassi", "Milk Drinks", "Tea"],
+		};
+
+		const MAIN_CATEGORIES = ["All", "Breakfast", "Lunch", "Dinner", "Drinks"];
+		const SUBCATEGORY_ORDER = {
+			All: ["Banana Leaf", "Banana Leaf Meal", "Claypot", "Briyani", "Biryani"],
+			Lunch: ["Banana Leaf", "Banana Leaf Meal", "Claypot", "Briyani", "Biryani"],
+		};
+
+		const subToMain = (() => {
+			const map = {};
+			Object.entries(CATEGORY_MAP).forEach(([main, subs]) => {
+				subs.forEach((sub) => {
+					const key = (sub || "").toLowerCase();
+					if (!map[key]) map[key] = [];
+					map[key].push(main);
+				});
+			});
+			return map;
+		})();
+
+		const normalizeSubcategory = (raw) => {
+			const cleaned = (raw || "").trim();
+			if (!cleaned) return "General";
+			const lower = cleaned.toLowerCase();
+			if (lower === "others" || lower === "other") return "General";
+			return cleaned;
+		};
+
+		const getMainCategoriesForItem = (item) => {
+			const sub = normalizeSubcategory(item?.category || item?.cat || "");
+			const mains = subToMain[sub.toLowerCase()] || [];
+			return mains.length ? mains : ["Unmapped"];
+		};
+
+		let activeMain = "All";
+		let ordersData = [];
 
 		const formatCurrency = (v) => `RM ${Number(v || 0).toFixed(2)}`;
 		const formatTimestamp = (ts) => {
@@ -334,6 +403,13 @@
 				const price = document.createElement("span");
 				price.className = "item-meta";
 				price.textContent = ` — ${formatCurrency((it.price || 0) * (it.qty || 1))}`;
+				const mains = getMainCategoriesForItem(it).filter((m) => m !== "Unmapped");
+				if (mains.length) {
+					const cats = document.createElement("span");
+					cats.className = "item-meta";
+					cats.textContent = ` • ${mains.join(" / ")}`;
+					price.appendChild(cats);
+				}
 				li.appendChild(name);
 				li.appendChild(price);
 				ul.appendChild(li);
@@ -385,7 +461,6 @@
 			return card;
 		};
 
-		// Render a list into a container
 		const renderList = (container, orders, emptyText) => {
 			container.innerHTML = "";
 			if (!orders.length) {
@@ -396,6 +471,16 @@
 				return;
 			}
 			orders.forEach((o) => container.appendChild(renderOrder(o)));
+		};
+
+		const orderMatchesActiveMain = (order) => {
+			if (activeMain === "All") return true;
+			return (order.items || []).some((it) => getMainCategoriesForItem(it).includes(activeMain));
+		};
+
+		const renderFilteredOrders = () => {
+			const filtered = ordersData.filter(orderMatchesActiveMain);
+			renderList(ordersList, filtered, "No orders for this category.");
 		};
 
 		// Actions
@@ -417,6 +502,23 @@
 			}
 		};
 
+		const buildCategoryNav = () => {
+			if (!categoryNav) return;
+			categoryNav.innerHTML = "";
+			MAIN_CATEGORIES.forEach((main) => {
+				const btn = document.createElement("button");
+				btn.className = "category-pill";
+				btn.textContent = main;
+				btn.classList.toggle("active", main === activeMain);
+				btn.addEventListener("click", () => {
+					activeMain = main;
+					buildCategoryNav();
+					renderFilteredOrders();
+				});
+				categoryNav.appendChild(btn);
+			});
+		};
+
 		// Live listener (activated only when authenticated)
 		let unsubscribe = null;
 
@@ -429,7 +531,8 @@
 					const data = docSnap.data();
 					all.push({ ...data, id: docSnap.id });
 				});
-				renderList(ordersList, all, "No orders yet.");
+				ordersData = all;
+				renderFilteredOrders();
 				lastUpdated.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
 			}, (error) => {
 				console.error("orders onSnapshot error", error);
@@ -505,6 +608,7 @@
 				}
 				hideAuth();
 				logoutBtn.style.display = "inline-flex";
+				buildCategoryNav();
 				startOrdersListener();
 			} else {
 				logoutBtn.style.display = "none";
