@@ -12,6 +12,7 @@
 			--black: #0f172a;
 			--gray: #f8fafc;
 			--border: #e2e8f0;
+			--cart-offset: 140px;
 		}
 
 		* { box-sizing: border-box; }
@@ -121,6 +122,28 @@
 		.quick-btn.active { border-color: var(--orange); background: #fff7ed; color: var(--orange-dark); }
 
 		.section-label { margin: 12px 0 6px; font-weight: 800; color: var(--black); }
+		.status-card {
+			border: 1px solid var(--border);
+			background: #fff7ed;
+			color: #9a3412;
+			padding: 12px;
+			border-radius: 12px;
+			font-weight: 700;
+			box-shadow: 0 6px 16px rgba(0,0,0,0.04);
+			display: grid;
+			gap: 8px;
+		}
+		.status-card strong { color: #c2410c; }
+		.retry-btn {
+			justify-self: start;
+			border: 1px solid var(--border);
+			background: #fff;
+			color: var(--orange-dark);
+			padding: 8px 12px;
+			border-radius: 10px;
+			font-weight: 800;
+			cursor: pointer;
+		}
 
 		.categories {
 			display: grid;
@@ -189,19 +212,25 @@
 			display: grid;
 			gap: 10px;
 		}
+		.cart-body { display: grid; gap: 10px; }
+		.cart-sheet.collapsed { max-height: none; padding: 10px 14px; row-gap: 6px; }
+		.cart-sheet.collapsed .cart-body { display: none; }
+		.cart-sheet.collapsed .cart-header { margin-bottom: 0; }
+		.cart-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+		.cart-header h4 { margin: 0; font-size: 16px; }
+		.cart-title { display: flex; flex-direction: column; gap: 4px; }
+		.cart-count { color: #475569; font-weight: 700; }
+		.cart-summary { margin-left: auto; font-weight: 900; color: var(--black); }
+		.cart-actions { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 		.cart-toggle {
-			position: fixed;
-			bottom: 10px;
-			right: 14px;
 			border: 1px solid var(--border);
 			background: #fff;
 			color: var(--black);
-			padding: 10px 12px;
+			padding: 8px 10px;
 			border-radius: 999px;
 			font-weight: 800;
-			box-shadow: 0 10px 22px rgba(0,0,0,0.12);
+			box-shadow: 0 6px 16px rgba(0,0,0,0.1);
 			cursor: pointer;
-			z-index: 120;
 		}
 		.send-options {
 			display: grid;
@@ -218,9 +247,6 @@
 			font-weight: 700;
 			background: #f8fafc;
 		}
-		.cart-header { display: flex; align-items: center; justify-content: space-between; }
-		.cart-header h4 { margin: 0; font-size: 16px; }
-		.cart-count { color: #475569; font-weight: 700; }
 		.edit-badge {
 			background: #e0f2fe;
 			color: #075985;
@@ -237,6 +263,7 @@
 		.cart-meta { color: #475569; font-size: 12px; font-weight: 700; }
 		.cart-qty { display: inline-flex; align-items: center; gap: 6px; }
 		.cart-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--orange); color: #fff; font-weight: 800; cursor: pointer; }
+		.cart-warning { font-size: 12px; color: #b91c1c; font-weight: 700; background: #fff1f2; border: 1px solid #fecdd3; padding: 8px 10px; border-radius: 10px; }
 
 		.total-row { display: flex; align-items: center; justify-content: space-between; font-weight: 800; }
 		.send-btn { width: 100%; padding: 14px 16px; border: none; border-radius: 12px; background: var(--orange); color: #fff; font-weight: 900; cursor: pointer; }
@@ -244,7 +271,7 @@
 
 		.note-input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-weight: 700; }
 
-		.toast { position: fixed; right: 14px; bottom: 140px; background: #0f172a; color: #fff; padding: 10px 12px; border-radius: 10px; display: none; font-weight: 800; box-shadow: 0 14px 30px rgba(0,0,0,0.2); }
+		.toast { position: fixed; right: 14px; bottom: var(--cart-offset, 140px); background: #0f172a; color: #fff; padding: 10px 12px; border-radius: 10px; display: none; font-weight: 800; box-shadow: 0 14px 30px rgba(0,0,0,0.2); }
 		.toast.show { display: block; }
 
 		.empty { color: #475569; font-weight: 700; text-align: center; padding: 20px 0; }
@@ -281,7 +308,7 @@
 	<header>
 		<div>
 			<div class="brand">RUCHI Waiter</div>
-			<p class="sub">Select table • add items • send</p>
+			<p class="sub">Browse menu • set table before sending</p>
 		</div>
 		<div class="table-box">
 			<label for="table-input">Table</label>
@@ -301,26 +328,33 @@
 		<div class="items-panel" id="items-panel"></div>
 	</main>
 
-	<section class="cart-sheet">
+	<section class="cart-sheet" id="cart-sheet">
 		<div class="cart-header">
-			<h4>Cart to counter</h4>
-			<div class="cart-count" id="cart-count">0 items</div>
-			<span class="edit-badge" id="editing-badge" style="display:none;">Editing order</span>
+			<div class="cart-title">
+				<h4>Cart to counter</h4>
+				<div class="cart-count" id="cart-count">0 items</div>
+			</div>
+			<div class="cart-summary" id="cart-summary">RM 0.00</div>
+			<div class="cart-actions">
+				<span class="edit-badge" id="editing-badge" style="display:none;">Editing order</span>
+				<button id="cart-toggle" class="cart-toggle" type="button">Collapse cart</button>
+			</div>
 		</div>
-		<div class="send-options">
-			<label><input id="send-kitchen" type="checkbox" checked /> Send to kitchen</label>
-			<label class="locked">Send to cashier (always on)</label>
+		<div class="cart-body">
+			<div class="send-options">
+				<label><input id="send-kitchen" type="checkbox" checked /> Send to kitchen</label>
+				<label class="locked">Send to cashier (always on)</label>
+			</div>
+			<div id="table-warning" class="cart-warning" style="display:none;">Add a table number to send this order.</div>
+			<input id="order-note" class="note-input" placeholder="Order note (optional)" />
+			<div class="cart-list" id="cart-list"></div>
+			<div class="total-row">
+				<span>Total</span>
+				<span id="total">RM 0.00</span>
+			</div>
+			<button id="send" class="send-btn" type="button">Send to counter</button>
 		</div>
-		<input id="order-note" class="note-input" placeholder="Order note (optional)" />
-		<div class="cart-list" id="cart-list"></div>
-		<div class="total-row">
-			<span>Total</span>
-			<span id="total">RM 0.00</span>
-		</div>
-		<button id="send" class="send-btn" type="button">Send to counter</button>
 	</section>
-
-	<button id="cart-toggle" class="cart-toggle" type="button" style="display:none;">Hide cart</button>
 
 	<div class="toast" id="toast"></div>
 
@@ -348,6 +382,8 @@
 		const quickRow = document.getElementById("quick-row");
 		const cartList = document.getElementById("cart-list");
 		const cartCount = document.getElementById("cart-count");
+		const cartSummary = document.getElementById("cart-summary");
+		const cartSheet = document.getElementById("cart-sheet");
 		const totalEl = document.getElementById("total");
 		const sendBtn = document.getElementById("send");
 		const orderNote = document.getElementById("order-note");
@@ -357,6 +393,7 @@
 		const searchBtn = document.getElementById("search-btn");
 		const sendKitchenToggle = document.getElementById("send-kitchen");
 		const cartToggle = document.getElementById("cart-toggle");
+		const tableWarning = document.getElementById("table-warning");
 
 		let menuItems = [];
 		let cart = [];
@@ -368,6 +405,8 @@
 		let activeOrderUnsub = null;
 		let searchTerm = "";
 		let cartHidden = false;
+		let isLoadingMenu = false;
+		let menuError = "";
 
 		const CART_KEY = (table) => `waiter_cart_table_${table || "default"}`;
 
@@ -418,10 +457,11 @@
 			setTimeout(() => toast.classList.remove("show"), 2000);
 		};
 
-		const updateCartToggleButton = (hasItems) => {
+		const updateCartToggleButton = (hasItemsOrOrder) => {
 			if (!cartToggle) return;
-			cartToggle.style.display = hasItems ? "inline-flex" : "none";
-			cartToggle.textContent = cartHidden ? "Show cart" : "Hide cart";
+			cartToggle.style.display = hasItemsOrOrder ? "inline-flex" : "none";
+			cartToggle.textContent = cartHidden ? "Expand cart" : "Collapse cart";
+			cartToggle.setAttribute("aria-expanded", (!cartHidden).toString());
 		};
 
 		const setEditingBadge = (text) => {
@@ -508,6 +548,25 @@
 
 		const renderCategories = () => {
 			categoriesEl.innerHTML = "";
+			if (isLoadingMenu) {
+				const card = document.createElement("div");
+				card.className = "status-card";
+				card.textContent = "Loading menu…";
+				categoriesEl.appendChild(card);
+				return;
+			}
+			if (menuError) {
+				const card = document.createElement("div");
+				card.className = "status-card";
+				card.innerHTML = `<strong>Menu not available.</strong><span>${menuError}</span>`;
+				const btn = document.createElement("button");
+				btn.className = "retry-btn";
+				btn.textContent = "Retry";
+				btn.addEventListener("click", () => fetchMenu(true));
+				card.appendChild(btn);
+				categoriesEl.appendChild(card);
+				return;
+			}
 			const cats = uniqueCategories();
 			if (!cats.length) {
 				const empty = document.createElement("div");
@@ -520,7 +579,6 @@
 				const btn = document.createElement("button");
 				btn.className = "cat-btn";
 				btn.textContent = cat || "Category";
-				btn.disabled = !currentTable;
 				btn.classList.toggle("active", cat === selectedCategory);
 				btn.addEventListener("click", () => {
 					selectedCategory = cat;
@@ -538,11 +596,23 @@
 
 		const renderItems = () => {
 			itemsPanel.innerHTML = "";
-			if (!currentTable) {
-				const lock = document.createElement("div");
-				lock.className = "empty";
-				lock.textContent = "Select a table to start";
-				itemsPanel.appendChild(lock);
+			if (isLoadingMenu) {
+				const card = document.createElement("div");
+				card.className = "status-card";
+				card.textContent = "Loading menu…";
+				itemsPanel.appendChild(card);
+				return;
+			}
+			if (menuError) {
+				const card = document.createElement("div");
+				card.className = "status-card";
+				card.innerHTML = `<strong>Menu not available.</strong><span>${menuError}</span>`;
+				const btn = document.createElement("button");
+				btn.className = "retry-btn";
+				btn.textContent = "Retry";
+				btn.addEventListener("click", () => fetchMenu(true));
+				card.appendChild(btn);
+				itemsPanel.appendChild(card);
 				return;
 			}
 			const list = menuItems.filter((i) => {
@@ -630,28 +700,47 @@
 			renderCart();
 		};
 
+		const adjustBodyPadding = () => {
+			if (!cartSheet) return;
+			const visible = cartSheet.style.display !== "none";
+			const height = visible ? cartSheet.offsetHeight : 0;
+			const offset = Math.max(height + 24, 140);
+			document.body.style.paddingBottom = `${offset}px`;
+			document.documentElement.style.setProperty("--cart-offset", `${offset}px`);
+		};
+
 		const renderCart = () => {
-			const cartSheet = document.querySelector(".cart-sheet");
 			cartList.innerHTML = "";
-			const hasTable = !!currentTable;
 			const hasItems = cart.length > 0;
-			const showCart = hasTable && hasItems && !cartHidden;
-			cartSheet.style.display = showCart ? "grid" : "none";
-			updateCartToggleButton(hasItems);
+			const shouldShow = hasItems || !!activeOrderId;
+			if (cartSheet) {
+				cartSheet.style.display = shouldShow ? "grid" : "none";
+				cartSheet.classList.toggle("collapsed", cartHidden);
+			}
+			updateCartToggleButton(shouldShow);
 			cartCount.textContent = `${cart.length || 0} items`;
 			const total = cart.reduce((sum, i) => sum + (i.price || 0) * (i.qty || 0), 0);
 			totalEl.textContent = currency(total);
+			if (cartSummary) cartSummary.textContent = currency(total);
+			const canSend = !!currentTable && hasItems && activeOrderStatus !== "paid";
+			sendBtn.disabled = !canSend;
+			sendBtn.textContent = activeOrderId ? "Update order" : "Send to counter";
+			if (tableWarning) {
+				tableWarning.style.display = currentTable ? "none" : "block";
+				tableWarning.textContent = currentTable ? "" : "Add a table number to send this order.";
+			}
+			if (!shouldShow) {
+				adjustBodyPadding();
+				return;
+			}
 			if (!hasItems) {
 				const empty = document.createElement("div");
 				empty.className = "empty";
-				empty.textContent = hasTable ? "Cart is empty" : "Select a table to start";
+				empty.textContent = "Cart is empty";
 				cartList.appendChild(empty);
-				sendBtn.disabled = true;
-				sendBtn.textContent = activeOrderId ? "Update order" : "Send to counter";
+				adjustBodyPadding();
 				return;
 			}
-			sendBtn.disabled = activeOrderStatus === "paid";
-			sendBtn.textContent = activeOrderId ? "Update order" : "Send to counter";
 			const frag = document.createDocumentFragment();
 			cart.forEach((item) => {
 				const row = document.createElement("div");
@@ -682,6 +771,7 @@
 				frag.appendChild(row);
 			});
 			cartList.appendChild(frag);
+			adjustBodyPadding();
 		};
 
 		const buildMainNav = () => {
@@ -703,16 +793,30 @@
 			});
 		};
 
-		const fetchMenu = async () => {
+		const fetchMenu = async (force = false) => {
+			if (isLoadingMenu && !force) return;
+			isLoadingMenu = true;
+			menuError = "";
+			renderCategories();
+			renderItems();
 			try {
 				const snap = await getDocs(collection(db, "menuItems"));
 				menuItems = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+				if (!selectedCategory && menuItems.length) {
+					const firstCat = normalizeSubcategory(menuItems[0].category);
+					selectedCategory = firstCat;
+				}
+				if (!menuItems.length) {
+					menuError = "Menu is empty. Add items in Firestore.";
+				}
+			} catch (err) {
+				console.error("Menu load failed", err);
+				menuError = "Could not reach the menu service. Check internet or Firestore availability.";
+			} finally {
+				isLoadingMenu = false;
 				buildMainNav();
 				renderCategories();
 				renderItems();
-			} catch (err) {
-				itemsPanel.innerHTML = "<div class=\"empty\">Menu unavailable</div>";
-				console.error("Menu load failed", err);
 			}
 		};
 
@@ -859,12 +963,13 @@
 				console.error("Send failed", err);
 				showToast("Could not send order");
 			} finally {
-				sendBtn.disabled = activeOrderStatus === "paid";
+				const canSendAfter = !!currentTable && cart.length > 0 && activeOrderStatus !== "paid";
+				sendBtn.disabled = !canSendAfter;
 				sendBtn.textContent = activeOrderId ? "Update order" : "Send to counter";
 			}
 		});
 
-		setTable(currentTable || "1");
+		setTable(currentTable || "");
 		fetchMenu();
 	</script>
 </body>
