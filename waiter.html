@@ -407,6 +407,7 @@
 		let cartHidden = false;
 		let isLoadingMenu = false;
 		let menuError = "";
+		const paidNotified = new Set();
 
 		const CART_KEY = (table) => `waiter_cart_table_${table || "default"}`;
 
@@ -492,6 +493,21 @@
 
 		const saveCart = (table, value) => {
 			localStorage.setItem(CART_KEY(table), JSON.stringify(value));
+		};
+
+		const clearTableCart = (table) => {
+			if (!table) return;
+			saveCart(table, []);
+			if (currentTable === table) {
+				stopActiveOrderListener();
+				activeOrderId = null;
+				activeOrderStatus = "unpaid";
+				setEditingBadge("");
+				cart = [];
+				if (orderNote) orderNote.value = "";
+				renderItems();
+				renderCart();
+			}
 		};
 
 		const setTable = async (val) => {
@@ -836,7 +852,10 @@
 				const data = docSnap.data();
 				const payment = (data.paymentStatus || "unpaid").toLowerCase();
 				const orderState = (data.orderStatus || "").toLowerCase();
-				if (payment === "paid" || orderState === "cancelled") return;
+				if (payment === "paid" || orderState === "cancelled") {
+					clearTableCart(table);
+					return;
+				}
 				if (sendKitchenToggle) sendKitchenToggle.checked = data.sentToKitchen !== undefined ? !!data.sentToKitchen : true;
 				activeOrderId = docSnap.id;
 				activeOrderStatus = payment;
@@ -889,6 +908,26 @@
 			cartHidden = !cartHidden;
 			renderCart();
 		});
+
+		const startPaidListener = () => {
+			const paidQuery = query(
+				collection(db, "orders"),
+				where("handledBy", "==", "waiter"),
+				where("paymentStatus", "==", "paid")
+			);
+			onSnapshot(paidQuery, (snap) => {
+				snap.docs.forEach((docSnap) => {
+					if (paidNotified.has(docSnap.id)) return;
+					paidNotified.add(docSnap.id);
+					const data = docSnap.data() || {};
+					const tableNum = data.tableNumber || data.table || "";
+					clearTableCart(tableNum);
+					showToast(tableNum ? `Table ${tableNum} paid. Cart cleared.` : "An order was paid. Cart cleared.");
+				});
+			}, (err) => {
+				console.error("paid listener error", err);
+			});
+		};
 
 			sendBtn.addEventListener("click", async () => {
 			const table = (tableInput.value || "").trim();
@@ -972,6 +1011,7 @@
 			}
 		});
 
+		startPaidListener();
 		setTable(currentTable || "");
 		fetchMenu();
 	</script>
