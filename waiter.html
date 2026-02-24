@@ -420,6 +420,16 @@
 		let isLoadingMenu = false;
 		let menuError = "";
 		const paidNotified = new Set();
+		const CLEAR_KEY = (table) => `waiter_cleared_order_${table || "default"}`;
+		const setClearedOrder = (table, orderId) => {
+			if (!table || !orderId) return;
+			localStorage.setItem(CLEAR_KEY(table), orderId);
+		};
+		const getClearedOrder = (table) => (table ? localStorage.getItem(CLEAR_KEY(table)) : null);
+		const removeClearedOrder = (table) => {
+			if (!table) return;
+			localStorage.removeItem(CLEAR_KEY(table));
+		};
 
 		const CART_KEY = (table) => `waiter_cart_table_${table || "default"}`;
 
@@ -507,8 +517,14 @@
 			localStorage.setItem(CART_KEY(table), JSON.stringify(value));
 		};
 
-		const clearTableCart = (table) => {
+		const clearTableCart = (table, opts = {}) => {
+			const { manual = false } = opts;
 			if (!table) return;
+			if (manual && activeOrderId) {
+				setClearedOrder(table, activeOrderId);
+			} else if (!manual) {
+				removeClearedOrder(table);
+			}
 			saveCart(table, []);
 			if (currentTable === table) {
 				stopActiveOrderListener();
@@ -864,10 +880,16 @@
 				const data = docSnap.data();
 				const payment = (data.paymentStatus || "unpaid").toLowerCase();
 				const orderState = (data.orderStatus || "").toLowerCase();
-				if (payment === "paid" || orderState === "cancelled") {
-					clearTableCart(table);
+				const clearedId = getClearedOrder(table);
+				if (clearedId && clearedId === docSnap.id && payment !== "paid" && orderState !== "cancelled") {
 					return;
 				}
+				if (payment === "paid" || orderState === "cancelled") {
+					clearTableCart(table);
+					removeClearedOrder(table);
+					return;
+				}
+				removeClearedOrder(table);
 				if (sendKitchenToggle) sendKitchenToggle.checked = data.sentToKitchen !== undefined ? !!data.sentToKitchen : true;
 				activeOrderId = docSnap.id;
 				activeOrderStatus = payment;
@@ -894,7 +916,8 @@
 						activeOrderId = null;
 						setEditingBadge("");
 						cart = [];
-						saveCart(table, cart);
+							saveCart(table, cart);
+							removeClearedOrder(table);
 						orderNote.value = "";
 						renderItems();
 						renderCart();
@@ -931,7 +954,7 @@
 			if (!first) return;
 			const second = confirm("Are you sure? This only clears the cart here; cashier still shows what was sent.");
 			if (!second) return;
-			clearTableCart(table);
+			clearTableCart(table, { manual: true });
 			showToast("Cart cleared locally. Cashier still has the order.");
 		});
 
@@ -948,6 +971,7 @@
 					const data = docSnap.data() || {};
 					const tableNum = data.tableNumber || data.table || "";
 					clearTableCart(tableNum);
+					removeClearedOrder(tableNum);
 					showToast(tableNum ? `Table ${tableNum} paid. Cart cleared.` : "An order was paid. Cart cleared.");
 				});
 			}, (err) => {
@@ -1004,6 +1028,7 @@
 					activeOrderId = docRef.id;
 					activeOrderStatus = "unpaid";
 					setEditingBadge(`Editing order ${docRef.id.slice(0, 6)}…`);
+					removeClearedOrder(table);
 					stopActiveOrderListener();
 					activeOrderUnsub = onSnapshot(doc(db, "orders", docRef.id), (liveSnap) => {
 						const live = liveSnap.data() || {};
