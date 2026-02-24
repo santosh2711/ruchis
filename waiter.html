@@ -242,6 +242,16 @@
 			box-shadow: 0 6px 16px rgba(0,0,0,0.08);
 			cursor: pointer;
 		}
+		.reload-btn {
+			border: 1px solid var(--border);
+			background: #f8fafc;
+			color: #0f172a;
+			padding: 8px 10px;
+			border-radius: 999px;
+			font-weight: 800;
+			box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+			cursor: pointer;
+		}
 		.send-options {
 			display: grid;
 			grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -347,6 +357,7 @@
 			<div class="cart-summary" id="cart-summary">RM 0.00</div>
 			<div class="cart-actions">
 				<span class="edit-badge" id="editing-badge" style="display:none;">Editing order</span>
+				<button id="reload-order" class="reload-btn" type="button" title="Pull latest order for this table">Reload order</button>
 				<button id="clear-cart" class="clear-btn" type="button" title="Clears only this cart. Cashier keeps sent orders.">Clear cart</button>
 				<button id="cart-toggle" class="cart-toggle" type="button">Collapse cart</button>
 			</div>
@@ -397,6 +408,7 @@
 		const cartSheet = document.getElementById("cart-sheet");
 		const totalEl = document.getElementById("total");
 		const sendBtn = document.getElementById("send");
+		const reloadBtn = document.getElementById("reload-order");
 		const clearCartBtn = document.getElementById("clear-cart");
 		const orderNote = document.getElementById("order-note");
 		const toast = document.getElementById("toast");
@@ -956,6 +968,14 @@
 			if (!second) return;
 			clearTableCart(table, { manual: true });
 			showToast("Cart cleared locally. Cashier still has the order.");
+		});
+
+		reloadBtn?.addEventListener("click", async () => {
+			const table = (tableInput.value || "").trim();
+			if (!table) { showToast("Pick a table first"); return; }
+			removeClearedOrder(table);
+			await loadExistingOrder(table);
+			showToast("Reloaded latest order for this table.");
 		});
 
 		const startPaidListener = () => {
