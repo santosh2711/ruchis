@@ -890,7 +890,7 @@
 			renderCart();
 		});
 
-		sendBtn.addEventListener("click", async () => {
+			sendBtn.addEventListener("click", async () => {
 			const table = (tableInput.value || "").trim();
 			if (!table) { showToast("Pick a table first"); return; }
 			if (!cart.length) return;
@@ -904,6 +904,7 @@
 				const totalPrice = cart.reduce((sum, i) => sum + (i.price || 0) * (i.qty || 0), 0);
 				const payload = {
 					tableNumber: table,
+					table,
 					handledBy: "waiter",
 					service: "dine-in",
 					items,
@@ -911,7 +912,9 @@
 					totalPrice,
 					paymentStatus: "unpaid",
 					sentToKitchen: kitchenSelected,
-					sendToCashier: cashierSelected
+					sendToCashier: cashierSelected,
+					orderStatus: kitchenSelected ? "in-kitchen" : "pending",
+					timestamp: serverTimestamp(),
 				};
 
 				if (activeOrderId) {
