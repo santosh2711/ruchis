@@ -232,6 +232,16 @@
 			box-shadow: 0 6px 16px rgba(0,0,0,0.1);
 			cursor: pointer;
 		}
+		.clear-btn {
+			border: 1px solid #fecdd3;
+			background: #fff1f2;
+			color: #b91c1c;
+			padding: 8px 10px;
+			border-radius: 999px;
+			font-weight: 800;
+			box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+			cursor: pointer;
+		}
 		.send-options {
 			display: grid;
 			grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -337,6 +347,7 @@
 			<div class="cart-summary" id="cart-summary">RM 0.00</div>
 			<div class="cart-actions">
 				<span class="edit-badge" id="editing-badge" style="display:none;">Editing order</span>
+				<button id="clear-cart" class="clear-btn" type="button" title="Clears only this cart. Cashier keeps sent orders.">Clear cart</button>
 				<button id="cart-toggle" class="cart-toggle" type="button">Collapse cart</button>
 			</div>
 		</div>
@@ -386,6 +397,7 @@
 		const cartSheet = document.getElementById("cart-sheet");
 		const totalEl = document.getElementById("total");
 		const sendBtn = document.getElementById("send");
+		const clearCartBtn = document.getElementById("clear-cart");
 		const orderNote = document.getElementById("order-note");
 		const toast = document.getElementById("toast");
 		const editingBadge = document.getElementById("editing-badge");
@@ -907,6 +919,20 @@
 		cartToggle?.addEventListener("click", () => {
 			cartHidden = !cartHidden;
 			renderCart();
+		});
+
+		clearCartBtn?.addEventListener("click", () => {
+			const table = (tableInput.value || "").trim();
+			const hasData = cart.length > 0 || !!activeOrderId;
+			if (!table) { showToast("Pick a table first"); return; }
+			if (!hasData) { showToast("Nothing to clear"); return; }
+			const label = table ? `Table ${table}` : "this cart";
+			const first = confirm(`Clear cart for ${label}? Sent orders stay on cashier.`);
+			if (!first) return;
+			const second = confirm("Are you sure? This only clears the cart here; cashier still shows what was sent.");
+			if (!second) return;
+			clearTableCart(table);
+			showToast("Cart cleared locally. Cashier still has the order.");
 		});
 
 		const startPaidListener = () => {
