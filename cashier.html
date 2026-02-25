@@ -96,6 +96,70 @@
 			color: var(--orange-dark);
 		}
 
+		/* POS (cashier) */
+		.pos-card { display: grid; gap: 12px; }
+		.pos-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+		.pos-input, .pos-select, .pos-textarea, .pos-search {
+			width: 100%;
+			padding: 10px 12px;
+			border: 1px solid var(--border);
+			border-radius: 10px;
+			font-weight: 700;
+		}
+		.pos-textarea { min-height: 60px; resize: vertical; }
+		.pos-main-nav, .pos-categories, .pos-quick { display: flex; gap: 8px; flex-wrap: wrap; }
+		.pos-main-pill, .pos-cat-pill, .pos-quick-btn {
+			border: 1px solid var(--border);
+			background: #fff;
+			color: var(--black);
+			padding: 9px 12px;
+			border-radius: 999px;
+			font-weight: 800;
+			cursor: pointer;
+			transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+		}
+		.pos-main-pill.active, .pos-cat-pill.active, .pos-quick-btn.active { background: #fff7ed; border-color: var(--orange); color: var(--orange-dark); }
+		.pos-items { display: grid; gap: 10px; }
+		.pos-menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+		.pos-card-item {
+			border: 1px solid var(--border);
+			border-radius: 14px;
+			padding: 12px;
+			background: #ffffff;
+			box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+			display: grid;
+			grid-template-columns: 80px 1fr;
+			grid-template-rows: auto auto;
+			gap: 8px 10px;
+			align-items: center;
+		}
+		.pos-thumb { width: 80px; height: 80px; border-radius: 10px; object-fit: cover; background: var(--gray); }
+		.pos-item-info { display: flex; flex-direction: column; gap: 4px; }
+		.pos-item-title { margin: 0; font-size: 16px; font-weight: 800; color: var(--black); }
+		.pos-item-price { font-weight: 800; color: var(--orange-dark); }
+		.pos-qty-wrap { display: inline-flex; align-items: center; gap: 10px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--gray); }
+		.pos-qty-btn { width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--orange); color: #fff; font-weight: 800; cursor: pointer; }
+		.pos-add-btn { border: 1px dashed var(--border); background: #fff7ed; color: var(--orange-dark); padding: 10px 12px; border-radius: 10px; font-weight: 800; cursor: pointer; }
+		.pos-cart {
+			border: 1px solid var(--border);
+			border-radius: 14px;
+			padding: 12px;
+			background: #ffffff;
+			box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+			display: grid;
+			gap: 10px;
+		}
+		.pos-cart-list { display: grid; gap: 8px; max-height: 240px; overflow-y: auto; }
+		.pos-cart-row { display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; }
+		.pos-cart-row h5 { margin: 0; font-size: 14px; }
+		.pos-cart-meta { color: #475569; font-size: 12px; font-weight: 700; }
+		.pos-cart-qty { display: inline-flex; align-items: center; gap: 6px; }
+		.pos-cart-btn { width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--orange); color: #fff; font-weight: 800; cursor: pointer; }
+		.pos-cart-summary { display: flex; justify-content: space-between; font-weight: 900; }
+		.pos-send { width: 100%; padding: 12px 14px; border: none; border-radius: 12px; background: var(--blue); color: #fff; font-weight: 900; cursor: pointer; }
+		.pos-send:disabled { opacity: 0.6; cursor: not-allowed; }
+		.pos-status { font-weight: 800; color: var(--red); }
+
 		.manual-card { display: grid; gap: 12px; margin-bottom: 4px; }
 		.manual-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
 		.manual-input, .manual-select, .manual-textarea {
@@ -274,44 +338,105 @@
 		<div class="header-actions">
 			<div class="subtle" id="last-updated">Updated: —</div>
 			<a class="logout-btn" href="manage-menu.html" style="text-decoration:none;">Manage menu</a>
+			<button class="logout-btn" id="pos-toggle" type="button">Hide POS</button>
 			<button class="logout-btn" id="logout-btn" type="button" style="display:none;">Log out</button>
 		</div>
 	</header>
 
 	<main>
-		<section class="section manual-card">
-			<h2>Add manual order</h2>
-			<div class="manual-grid">
-				<div>
-					<label class="subtle" for="manual-table">Table (optional)</label>
-					<input id="manual-table" class="manual-input" type="text" placeholder="Table number" />
-				</div>
-				<div>
-					<label class="subtle" for="manual-service">Service</label>
-					<select id="manual-service" class="manual-select">
-						<option value="dine-in">Dine-in</option>
-						<option value="takeaway">Takeaway</option>
-					</select>
-				</div>
-				<div>
-					<label class="subtle" for="manual-send-kitchen">Send to kitchen</label>
-					<div style="display:flex;align-items:center;gap:8px;">
-						<input id="manual-send-kitchen" type="checkbox" checked />
-						<span class="meta">Forward to kitchen display</span>
+		<section class="section pos-card" id="pos-card">
+			<div class="row" style="align-items:center;">
+				<h2 style="margin:0;">POS order</h2>
+				<button class="logout-btn" id="pos-toggle-inline" type="button">Hide POS</button>
+			</div>
+			<div id="pos-body">
+				<div class="pos-row">
+					<div>
+						<label class="subtle" for="pos-table">Table (optional)</label>
+						<input id="pos-table" class="pos-input" type="text" placeholder="Table number" />
+					</div>
+					<div>
+						<label class="subtle" for="pos-service">Service</label>
+						<select id="pos-service" class="pos-select">
+							<option value="dine-in">Dine-in</option>
+							<option value="takeaway">Takeaway</option>
+						</select>
+					</div>
+					<div>
+						<label class="subtle" for="pos-send-kitchen">Send to kitchen</label>
+						<div style="display:flex;align-items:center;gap:8px;">
+							<input id="pos-send-kitchen" type="checkbox" checked />
+							<span class="meta">Forward to kitchen display</span>
+						</div>
 					</div>
 				</div>
-				<div>
-					<label class="subtle" for="manual-note">Order note</label>
-					<textarea id="manual-note" class="manual-textarea" placeholder="Notes for kitchen or cashier"></textarea>
+				<div class="pos-row">
+					<div style="grid-column: 1 / -1;">
+						<label class="subtle" for="pos-note">Order note</label>
+						<textarea id="pos-note" class="pos-textarea" placeholder="Notes for kitchen or cashier"></textarea>
+					</div>
+				</div>
+				<div class="pos-row" style="align-items:center;">
+					<input id="pos-search" class="pos-search" type="search" placeholder="Search items" />
+					<button id="pos-search-btn" class="logout-btn" type="button">Search</button>
+				</div>
+				<div class="pos-main-nav" id="pos-main-nav"></div>
+				<div class="pos-categories" id="pos-categories"></div>
+				<div class="pos-items" id="pos-items"></div>
+				<div class="pos-cart" id="pos-cart" style="display:none;">
+					<div class="pos-cart-list" id="pos-cart-list"></div>
+					<div class="pos-cart-summary">
+						<span>Total</span>
+						<span id="pos-total">RM 0.00</span>
+					</div>
+					<div style="display:flex; gap:8px; flex-wrap:wrap;">
+						<button id="pos-clear" class="logout-btn" type="button">Clear cart</button>
+						<button id="pos-submit" class="pos-send" type="button">Add order</button>
+					</div>
+					<div id="pos-status" class="pos-status"></div>
 				</div>
 			</div>
-			<div class="manual-items" id="manual-items"></div>
-			<div class="manual-actions">
-				<button id="manual-add-item" class="manual-add" type="button">Add item</button>
-				<div id="manual-total" class="manual-total">Total: RM 0.00</div>
-				<button id="manual-submit" class="manual-submit" type="button">Add order</button>
+		</section>
+
+		<section class="section manual-card" id="manual-card">
+			<div class="row" style="align-items:center;">
+				<h2 style="margin:0;">Manual items</h2>
+				<span class="subtle">Use for items not in database</span>
+				<button class="logout-btn" id="manual-toggle-inline" type="button">Hide manual</button>
 			</div>
-			<div id="manual-status" class="manual-status"></div>
+			<div id="manual-body">
+				<div class="manual-grid">
+					<div>
+						<label class="subtle" for="manual-table">Table (optional)</label>
+						<input id="manual-table" class="manual-input" type="text" placeholder="Table number" />
+					</div>
+					<div>
+						<label class="subtle" for="manual-service">Service</label>
+						<select id="manual-service" class="manual-select">
+							<option value="dine-in">Dine-in</option>
+							<option value="takeaway">Takeaway</option>
+						</select>
+					</div>
+					<div>
+						<label class="subtle" for="manual-send-kitchen">Send to kitchen</label>
+						<div style="display:flex;align-items:center;gap:8px;">
+							<input id="manual-send-kitchen" type="checkbox" checked />
+							<span class="meta">Forward to kitchen display</span>
+						</div>
+					</div>
+					<div>
+						<label class="subtle" for="manual-note">Order note</label>
+						<textarea id="manual-note" class="manual-textarea" placeholder="Notes for kitchen or cashier"></textarea>
+					</div>
+				</div>
+				<div class="manual-items" id="manual-items"></div>
+				<div class="manual-actions">
+					<button id="manual-add-item" class="manual-add" type="button">Add item</button>
+					<div id="manual-total" class="manual-total">Total: RM 0.00</div>
+					<button id="manual-submit" class="manual-submit" type="button">Add order</button>
+				</div>
+				<div id="manual-status" class="manual-status"></div>
+			</div>
 		</section>
 
 		<section class="section">
@@ -337,7 +462,7 @@
 
 	<script type="module">
 		import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-		import { getFirestore, collection, query, orderBy, onSnapshot, updateDoc, doc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+		import { getFirestore, collection, query, orderBy, onSnapshot, updateDoc, doc, addDoc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 		import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 		// Firebase config (provided)
@@ -366,6 +491,26 @@
 		const authSignin = document.getElementById("auth-signin");
 		const authError = document.getElementById("auth-error");
 		const logoutBtn = document.getElementById("logout-btn");
+		const posToggle = document.getElementById("pos-toggle");
+		const posToggleInline = document.getElementById("pos-toggle-inline");
+		const posBody = document.getElementById("pos-body");
+		const manualToggleInline = document.getElementById("manual-toggle-inline");
+		const manualBody = document.getElementById("manual-body");
+		const posMainNav = document.getElementById("pos-main-nav");
+		const posCategories = document.getElementById("pos-categories");
+		const posItemsPanel = document.getElementById("pos-items");
+		const posCartList = document.getElementById("pos-cart-list");
+		const posCartEl = document.getElementById("pos-cart");
+		const posTotal = document.getElementById("pos-total");
+		const posSubmit = document.getElementById("pos-submit");
+		const posClear = document.getElementById("pos-clear");
+		const posStatus = document.getElementById("pos-status");
+		const posSearch = document.getElementById("pos-search");
+		const posSearchBtn = document.getElementById("pos-search-btn");
+		const posTableInput = document.getElementById("pos-table");
+		const posService = document.getElementById("pos-service");
+		const posSendKitchen = document.getElementById("pos-send-kitchen");
+		const posNote = document.getElementById("pos-note");
 		const manualItemsContainer = document.getElementById("manual-items");
 		const manualAddItemBtn = document.getElementById("manual-add-item");
 		const manualTableInput = document.getElementById("manual-table");
@@ -423,6 +568,13 @@
 
 		let activeMain = "All";
 		let ordersData = [];
+		let posMenuItems = [];
+		let posCart = [];
+		let posActiveMain = "All";
+		let posSelectedCategory = "";
+		let posSearchTerm = "";
+		let posLoadingMenu = false;
+		let posMenuError = "";
 		let manualItems = [{ name: "", qty: 1, price: "", category: "", prep: "kitchen" }];
 
 		const formatCurrency = (v) => `RM ${Number(v || 0).toFixed(2)}`;
@@ -517,6 +669,331 @@
 			if (manualStatus) manualStatus.textContent = "";
 		};
 
+		const posItemMatchesMain = (item, main) => {
+			if (main === "All") return true;
+			const sub = normalizeSubcategory(item?.category || "");
+			const mains = subToMain[sub.toLowerCase()] || [];
+			return mains.includes(main);
+		};
+
+		const posUniqueCategories = () => {
+			const set = new Set();
+			posMenuItems.forEach((i) => {
+				if (!posItemMatchesMain(i, posActiveMain)) return;
+				if (i.category) set.add(normalizeSubcategory(i.category));
+			});
+			const cats = Array.from(set);
+			const order = SUBCATEGORY_ORDER[posActiveMain] || [];
+			const rank = (label) => {
+				const idx = order.findIndex((v) => v.toLowerCase() === (label || "").toLowerCase());
+				return idx === -1 ? Number.POSITIVE_INFINITY : idx;
+			};
+			return cats.sort((a, b) => {
+				const ra = rank(a);
+				const rb = rank(b);
+				if (ra !== rb) return ra - rb;
+				return a.localeCompare(b, "en", { sensitivity: "base" });
+			});
+		};
+
+		const renderPosCategories = () => {
+			if (!posCategories) return;
+			posCategories.innerHTML = "";
+			if (posLoadingMenu) {
+				const card = document.createElement("div");
+				card.className = "subtle";
+				card.textContent = "Loading menu…";
+				posCategories.appendChild(card);
+				return;
+			}
+			if (posMenuError) {
+				const card = document.createElement("div");
+				card.className = "subtle";
+				card.textContent = posMenuError;
+				posCategories.appendChild(card);
+				return;
+			}
+			const cats = posUniqueCategories();
+			if (!cats.length) {
+				const empty = document.createElement("div");
+				empty.className = "subtle";
+				empty.textContent = "No categories";
+				posCategories.appendChild(empty);
+				return;
+			}
+			cats.forEach((cat, idx) => {
+				const btn = document.createElement("button");
+				btn.className = "pos-cat-pill";
+				btn.textContent = cat || "Category";
+				btn.classList.toggle("active", cat === posSelectedCategory);
+				btn.addEventListener("click", () => {
+					posSelectedCategory = cat;
+					renderPosCategories();
+					renderPosItems();
+				});
+				posCategories.appendChild(btn);
+				if (!posSelectedCategory && idx === 0) posSelectedCategory = cat;
+			});
+			if (posSelectedCategory && !cats.includes(posSelectedCategory)) {
+				posSelectedCategory = cats[0];
+				renderPosCategories();
+			}
+		};
+
+		const posUpdateCart = (item, delta) => {
+			const existing = posCart.find((c) => c.id === item.id);
+			if (existing) {
+				existing.qty += delta;
+				if (existing.qty <= 0) posCart = posCart.filter((c) => c.id !== item.id);
+			} else if (delta > 0) {
+				posCart.push({ id: item.id, name: item.name || "Item", price: Number(item.price) || 0, qty: 1, category: item.category || "", prep: item.prep || "kitchen" });
+			}
+			renderPosItems();
+			renderPosCart();
+		};
+
+		const renderPosItems = () => {
+			if (!posItemsPanel) return;
+			posItemsPanel.innerHTML = "";
+			if (posLoadingMenu) {
+				const card = document.createElement("div");
+				card.className = "subtle";
+				card.textContent = "Loading menu…";
+				posItemsPanel.appendChild(card);
+				return;
+			}
+			if (posMenuError) {
+				const card = document.createElement("div");
+				card.className = "subtle";
+				card.textContent = posMenuError;
+				posItemsPanel.appendChild(card);
+				return;
+			}
+			const list = posMenuItems.filter((i) => {
+				const matchesMain = posItemMatchesMain(i, posActiveMain);
+				const matchesCategory = normalizeSubcategory(i.category) === posSelectedCategory;
+				const matchesSearch = !posSearchTerm || (i.name || "").toLowerCase().includes(posSearchTerm);
+				return matchesMain && matchesCategory && matchesSearch;
+			});
+			if (!list.length) {
+				const empty = document.createElement("div");
+				empty.className = "subtle";
+				empty.textContent = posSearchTerm ? "No items match your search" : "No items in this category";
+				posItemsPanel.appendChild(empty);
+				return;
+			}
+			const grid = document.createElement("section");
+			grid.className = "pos-menu-grid";
+			list.forEach((item) => {
+				const card = document.createElement("article");
+				card.className = "pos-card-item";
+				card.tabIndex = 0;
+
+				const img = document.createElement("img");
+				img.className = "pos-thumb";
+				img.src = item.image || item.imageURL || "https://via.placeholder.com/120x120?text=No+Image";
+				img.alt = item.name || "Item";
+				img.loading = "lazy";
+				img.decoding = "async";
+
+				const info = document.createElement("div");
+				info.className = "pos-item-info";
+				const title = document.createElement("h3");
+				title.className = "pos-item-title";
+				title.textContent = item.name || "Item";
+				const price = document.createElement("div");
+				price.className = "pos-item-price";
+				price.textContent = formatCurrency(item.price);
+				info.append(title, price);
+
+				card.addEventListener("click", () => posUpdateCart(item, 1));
+				card.addEventListener("keypress", (e) => { if (e.key === "Enter" || e.key === " ") posUpdateCart(item, 1); });
+
+				const controls = document.createElement("div");
+				const existing = posCart.find((c) => c.id === item.id);
+				if (existing) {
+					const wrap = document.createElement("div");
+					wrap.className = "pos-qty-wrap";
+					const dec = document.createElement("button");
+					dec.className = "pos-qty-btn";
+					dec.textContent = "-";
+					dec.addEventListener("click", (e) => { e.stopPropagation(); posUpdateCart(item, -1); });
+					const val = document.createElement("div");
+					val.textContent = existing.qty;
+					const inc = document.createElement("button");
+					inc.className = "pos-qty-btn";
+					inc.textContent = "+";
+					inc.addEventListener("click", (e) => { e.stopPropagation(); posUpdateCart(item, 1); });
+					wrap.append(dec, val, inc);
+					controls.appendChild(wrap);
+				} else {
+					const add = document.createElement("button");
+					add.className = "pos-add-btn";
+					add.textContent = "Add";
+					add.addEventListener("click", (e) => { e.stopPropagation(); posUpdateCart(item, 1); });
+					controls.appendChild(add);
+				}
+
+				card.append(img, info, controls);
+				grid.appendChild(card);
+			});
+			posItemsPanel.appendChild(grid);
+		};
+
+		const renderPosCart = () => {
+			if (!posCartList || !posTotal || !posCartEl) return;
+			posCartList.innerHTML = "";
+			const hasItems = posCart.length > 0;
+			posCartEl.style.display = hasItems ? "grid" : "none";
+			if (posSubmit) posSubmit.disabled = !hasItems;
+			if (posClear) posClear.disabled = !hasItems;
+			const total = posCart.reduce((sum, i) => sum + (i.price || 0) * (i.qty || 0), 0);
+			posTotal.textContent = formatCurrency(total);
+			if (!hasItems) {
+				const empty = document.createElement("div");
+				empty.className = "subtle";
+				empty.textContent = "Cart is empty";
+				posCartList.appendChild(empty);
+				return;
+			}
+			const frag = document.createDocumentFragment();
+			posCart.forEach((item) => {
+				const row = document.createElement("div");
+				row.className = "pos-cart-row";
+				const left = document.createElement("div");
+				const title = document.createElement("h5");
+				title.textContent = item.name;
+				const meta = document.createElement("div");
+				meta.className = "pos-cart-meta";
+				meta.textContent = item.category || "";
+				left.append(title, meta);
+
+				const qty = document.createElement("div");
+				qty.className = "pos-cart-qty";
+				const dec = document.createElement("button");
+				dec.className = "pos-cart-btn";
+				dec.textContent = "-";
+				dec.addEventListener("click", () => posUpdateCart(item, -1));
+				const val = document.createElement("div");
+				val.textContent = item.qty;
+				const inc = document.createElement("button");
+				inc.className = "pos-cart-btn";
+				inc.textContent = "+";
+				inc.addEventListener("click", () => posUpdateCart(item, 1));
+				qty.append(dec, val, inc);
+
+				row.append(left, qty);
+				frag.appendChild(row);
+			});
+			posCartList.appendChild(frag);
+		};
+
+		const buildPosMainNav = () => {
+			if (!posMainNav) return;
+			posMainNav.innerHTML = "";
+			MAIN_CATEGORIES.forEach((main) => {
+				const btn = document.createElement("button");
+				btn.className = "pos-main-pill";
+				btn.textContent = main;
+				btn.classList.toggle("active", main === posActiveMain);
+				btn.addEventListener("click", () => {
+					posActiveMain = main;
+					posSelectedCategory = "";
+					buildPosMainNav();
+					renderPosCategories();
+					renderPosItems();
+				});
+				posMainNav.appendChild(btn);
+			});
+		};
+
+		const fetchPosMenu = async () => {
+			if (posLoadingMenu) return;
+			posLoadingMenu = true;
+			posMenuError = "";
+			renderPosCategories();
+			renderPosItems();
+			try {
+				const snap = await getDocs(collection(db, "menuItems"));
+				posMenuItems = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+				if (!posSelectedCategory && posMenuItems.length) {
+					const firstCat = normalizeSubcategory(posMenuItems[0].category);
+					posSelectedCategory = firstCat;
+				}
+				if (!posMenuItems.length) posMenuError = "Menu is empty. Add items in Firestore.";
+			} catch (err) {
+				console.error("POS menu load failed", err);
+				posMenuError = "Could not load menu.";
+			} finally {
+				posLoadingMenu = false;
+				buildPosMainNav();
+				renderPosCategories();
+				renderPosItems();
+			}
+		};
+
+		const clearPosCart = () => {
+			posCart = [];
+			renderPosItems();
+			renderPosCart();
+			if (posStatus) posStatus.textContent = "";
+		};
+
+		const sendPosOrder = async () => {
+			if (!posSubmit) return;
+			if (posStatus) {
+				posStatus.textContent = "";
+				posStatus.style.color = "var(--red)";
+			}
+			if (!posCart.length) {
+				if (posStatus) posStatus.textContent = "Add items to send.";
+				return;
+			}
+			posSubmit.disabled = true;
+			posSubmit.textContent = "Adding...";
+			try {
+				const table = (posTableInput?.value || "").trim();
+				const sentToKitchen = posSendKitchen ? !!posSendKitchen.checked : true;
+				const items = posCart.map((i, idx) => ({
+					id: i.id || `pos-${idx}`,
+					name: i.name,
+					qty: i.qty,
+					price: i.price,
+					prep: i.prep || "kitchen",
+					category: i.category || "",
+					note: "",
+				}));
+				const payload = {
+					tableNumber: table,
+					table: table,
+					handledBy: "cashier",
+					service: posService?.value || "dine-in",
+					items,
+					notes: (posNote?.value || "").trim(),
+					totalPrice: items.reduce((sum, i) => sum + (i.price || 0) * (i.qty || 0), 0),
+					paymentStatus: "unpaid",
+					sentToKitchen,
+					sendToCashier: true,
+					orderStatus: sentToKitchen ? "in-kitchen" : "pending",
+					timestamp: serverTimestamp(),
+					createdAt: serverTimestamp(),
+				};
+				const docRef = await addDoc(collection(db, "orders"), { ...payload, orderId: "" });
+				await updateDoc(docRef, { orderId: docRef.id });
+				if (posStatus) {
+					posStatus.style.color = "var(--green)";
+					posStatus.textContent = "Order added to cashier dashboard.";
+				}
+				clearPosCart();
+			} catch (err) {
+				console.error("POS order failed", err);
+				if (posStatus) posStatus.textContent = "Could not add order.";
+			} finally {
+				posSubmit.disabled = false;
+				posSubmit.textContent = "Add order";
+			}
+		};
+
 		const submitManualOrder = async () => {
 			if (!manualSubmit) return;
 			if (manualStatus) {
@@ -562,7 +1039,7 @@
 				await updateDoc(docRef, { orderId: docRef.id });
 				if (manualStatus) {
 					manualStatus.style.color = "var(--green)";
-					manualStatus.textContent = "Order added to cashier dashboard.";
+					manualStatus.textContent = "Manual order added.";
 				}
 				resetManualForm();
 			} catch (err) {
@@ -741,6 +1218,19 @@
 			});
 		};
 
+		posSubmit?.addEventListener("click", sendPosOrder);
+		posClear?.addEventListener("click", clearPosCart);
+		posSearchBtn?.addEventListener("click", () => {
+			posSearchTerm = (posSearch?.value || "").trim().toLowerCase();
+			renderPosItems();
+		});
+		posSearch?.addEventListener("keypress", (e) => {
+			if (e.key === "Enter") {
+				posSearchTerm = (posSearch?.value || "").trim().toLowerCase();
+				renderPosItems();
+			}
+		});
+
 		manualAddItemBtn?.addEventListener("click", () => {
 			manualItems.push(emptyManualItem());
 			renderManualItems();
@@ -748,6 +1238,29 @@
 
 		manualSubmit?.addEventListener("click", submitManualOrder);
 
+		posToggle?.addEventListener("click", () => {
+			const hidden = posBody.style.display === "none";
+			posBody.style.display = hidden ? "grid" : "none";
+			posToggle.textContent = hidden ? "Hide POS" : "Show POS";
+			if (posToggleInline) posToggleInline.textContent = posToggle.textContent;
+		});
+
+		posToggleInline?.addEventListener("click", () => {
+			const hidden = posBody.style.display === "none";
+			posBody.style.display = hidden ? "grid" : "none";
+			posToggleInline.textContent = hidden ? "Hide POS" : "Show POS";
+			if (posToggle) posToggle.textContent = posToggleInline.textContent;
+		});
+
+		manualToggleInline?.addEventListener("click", () => {
+			const hidden = manualBody.style.display === "none";
+			manualBody.style.display = hidden ? "grid" : "none";
+			manualToggleInline.textContent = hidden ? "Hide manual" : "Show manual";
+		});
+
+		buildPosMainNav();
+		renderPosCart();
+		fetchPosMenu();
 		renderManualItems();
 
 		// Live listener (activated only when authenticated)
