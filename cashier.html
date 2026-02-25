@@ -96,6 +96,33 @@
 			color: var(--orange-dark);
 		}
 
+		.manual-card { display: grid; gap: 12px; margin-bottom: 4px; }
+		.manual-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+		.manual-input, .manual-select, .manual-textarea {
+			width: 100%;
+			padding: 10px 12px;
+			border: 1px solid var(--border);
+			border-radius: 10px;
+			font-weight: 700;
+		}
+		.manual-textarea { min-height: 68px; resize: vertical; }
+		.manual-row { display: grid; grid-template-columns: 2fr 80px 110px 1.4fr auto; gap: 8px; align-items: center; }
+		.manual-row input { width: 100%; }
+		.manual-row .remove-btn {
+			border: 1px solid var(--border);
+			background: #fff1f2;
+			color: #b91c1c;
+			border-radius: 10px;
+			padding: 8px 10px;
+			font-weight: 800;
+			cursor: pointer;
+		}
+		.manual-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+		.manual-add { border: 1px dashed var(--border); background: #fff7ed; color: var(--orange-dark); border-radius: 10px; padding: 10px 12px; font-weight: 800; cursor: pointer; }
+		.manual-submit { background: var(--blue); color: #fff; border: none; border-radius: 10px; padding: 11px 14px; font-weight: 900; cursor: pointer; }
+		.manual-status { font-weight: 800; color: var(--red); }
+		.manual-total { font-weight: 900; color: var(--black); margin-left: auto; }
+
 		.orders { display: grid; gap: 12px; }
 
 		.card {
@@ -136,6 +163,7 @@
 		.pill.table { background: #0f172a; }
 		.pill.dine { background: var(--blue); }
 		.pill.take { background: var(--orange); }
+		.pill.cashier { background: #0ea5e9; }
 		.pill.paid { background: var(--green); }
 		.pill.unpaid { background: #1e293b; }
 		.pill.cancelled { background: var(--red); }
@@ -251,6 +279,41 @@
 	</header>
 
 	<main>
+		<section class="section manual-card">
+			<h2>Add manual order</h2>
+			<div class="manual-grid">
+				<div>
+					<label class="subtle" for="manual-table">Table (optional)</label>
+					<input id="manual-table" class="manual-input" type="text" placeholder="Table number" />
+				</div>
+				<div>
+					<label class="subtle" for="manual-service">Service</label>
+					<select id="manual-service" class="manual-select">
+						<option value="dine-in">Dine-in</option>
+						<option value="takeaway">Takeaway</option>
+					</select>
+				</div>
+				<div>
+					<label class="subtle" for="manual-send-kitchen">Send to kitchen</label>
+					<div style="display:flex;align-items:center;gap:8px;">
+						<input id="manual-send-kitchen" type="checkbox" checked />
+						<span class="meta">Forward to kitchen display</span>
+					</div>
+				</div>
+				<div>
+					<label class="subtle" for="manual-note">Order note</label>
+					<textarea id="manual-note" class="manual-textarea" placeholder="Notes for kitchen or cashier"></textarea>
+				</div>
+			</div>
+			<div class="manual-items" id="manual-items"></div>
+			<div class="manual-actions">
+				<button id="manual-add-item" class="manual-add" type="button">Add item</button>
+				<div id="manual-total" class="manual-total">Total: RM 0.00</div>
+				<button id="manual-submit" class="manual-submit" type="button">Add order</button>
+			</div>
+			<div id="manual-status" class="manual-status"></div>
+		</section>
+
 		<section class="section">
 			<h2>Orders</h2>
 			<div class="category-nav" id="category-nav"></div>
@@ -274,7 +337,7 @@
 
 	<script type="module">
 		import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-		import { getFirestore, collection, query, orderBy, onSnapshot, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+		import { getFirestore, collection, query, orderBy, onSnapshot, updateDoc, doc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 		import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 		// Firebase config (provided)
@@ -303,6 +366,15 @@
 		const authSignin = document.getElementById("auth-signin");
 		const authError = document.getElementById("auth-error");
 		const logoutBtn = document.getElementById("logout-btn");
+		const manualItemsContainer = document.getElementById("manual-items");
+		const manualAddItemBtn = document.getElementById("manual-add-item");
+		const manualTableInput = document.getElementById("manual-table");
+		const manualNoteInput = document.getElementById("manual-note");
+		const manualService = document.getElementById("manual-service");
+		const manualSendKitchen = document.getElementById("manual-send-kitchen");
+		const manualSubmit = document.getElementById("manual-submit");
+		const manualStatus = document.getElementById("manual-status");
+		const manualTotal = document.getElementById("manual-total");
 
 		// Restrict access to a single authorized account
 		const allowedEmail = "shubhakumarvel@gmail.com"; // TODO: replace with the real cashier email
@@ -351,6 +423,7 @@
 
 		let activeMain = "All";
 		let ordersData = [];
+		let manualItems = [{ name: "", qty: 1, price: "", category: "", prep: "kitchen" }];
 
 		const formatCurrency = (v) => `RM ${Number(v || 0).toFixed(2)}`;
 		const formatTimestamp = (ts) => {
@@ -359,6 +432,146 @@
 			if (!value) return "";
 			const d = new Date(value);
 			return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+		};
+
+		const emptyManualItem = () => ({ name: "", qty: 1, price: "", category: "", prep: "kitchen" });
+
+		const updateManualTotal = () => {
+			if (!manualTotal) return;
+			const total = manualItems.reduce((sum, i) => {
+				if (!i.name?.trim()) return sum;
+				const qty = Number(i.qty) || 0;
+				const price = Number(i.price) || 0;
+				return sum + qty * price;
+			}, 0);
+			manualTotal.textContent = `Total: ${formatCurrency(total)}`;
+		};
+
+		const renderManualItems = () => {
+			if (!manualItemsContainer) return;
+			manualItemsContainer.innerHTML = "";
+			const header = document.createElement("div");
+			header.className = "manual-row subtle";
+			header.innerHTML = "<span>Item</span><span>Qty</span><span>Price</span><span>Category</span><span></span>";
+			manualItemsContainer.appendChild(header);
+			manualItems.forEach((item, idx) => {
+				const row = document.createElement("div");
+				row.className = "manual-row";
+				const name = document.createElement("input");
+				name.className = "manual-input";
+				name.placeholder = "Item name";
+				name.value = item.name;
+				name.addEventListener("input", (e) => { manualItems[idx].name = e.target.value; updateManualTotal(); });
+
+				const qty = document.createElement("input");
+				qty.className = "manual-input";
+				qty.type = "number";
+				qty.min = "1";
+				qty.value = item.qty;
+				qty.addEventListener("input", (e) => { manualItems[idx].qty = Number(e.target.value) || 1; updateManualTotal(); });
+
+				const price = document.createElement("input");
+				price.className = "manual-input";
+				price.type = "number";
+				price.step = "0.01";
+				price.min = "0";
+				price.value = item.price;
+				price.addEventListener("input", (e) => { manualItems[idx].price = e.target.value; updateManualTotal(); });
+
+				const cat = document.createElement("input");
+				cat.className = "manual-input";
+				cat.placeholder = "Category (optional)";
+				cat.value = item.category || "";
+				cat.addEventListener("input", (e) => { manualItems[idx].category = e.target.value; });
+
+				row.appendChild(name);
+				row.appendChild(qty);
+				row.appendChild(price);
+				row.appendChild(cat);
+
+				const actions = document.createElement("div");
+				if (manualItems.length > 1) {
+					const remove = document.createElement("button");
+					remove.type = "button";
+					remove.className = "remove-btn";
+					remove.textContent = "Remove";
+					remove.addEventListener("click", () => {
+						manualItems.splice(idx, 1);
+						renderManualItems();
+					});
+					actions.appendChild(remove);
+				}
+				row.appendChild(actions);
+				manualItemsContainer.appendChild(row);
+			});
+			updateManualTotal();
+		};
+
+		const resetManualForm = () => {
+			manualItems = [emptyManualItem()];
+			if (manualTableInput) manualTableInput.value = "";
+			if (manualNoteInput) manualNoteInput.value = "";
+			if (manualService) manualService.value = "dine-in";
+			if (manualSendKitchen) manualSendKitchen.checked = true;
+			renderManualItems();
+			if (manualStatus) manualStatus.textContent = "";
+		};
+
+		const submitManualOrder = async () => {
+			if (!manualSubmit) return;
+			if (manualStatus) {
+				manualStatus.textContent = "";
+				manualStatus.style.color = "var(--red)";
+			}
+			const items = manualItems
+				.map((i, idx) => ({
+					id: i.id || `manual-${idx}`,
+					name: (i.name || "").trim(),
+					qty: Number(i.qty) || 1,
+					price: Number(i.price) || 0,
+					category: (i.category || "").trim(),
+					prep: i.prep || "kitchen",
+					note: "",
+				}))
+				.filter((i) => i.name);
+			if (!items.length) {
+				if (manualStatus) manualStatus.textContent = "Add at least one item.";
+				return;
+			}
+			manualSubmit.disabled = true;
+			manualSubmit.textContent = "Adding...";
+			try {
+				const table = (manualTableInput?.value || "").trim();
+				const sentToKitchen = manualSendKitchen ? !!manualSendKitchen.checked : true;
+				const payload = {
+					tableNumber: table || "",
+					table: table || "",
+					handledBy: "cashier",
+					service: manualService?.value || "dine-in",
+					items,
+					notes: (manualNoteInput?.value || "").trim(),
+					totalPrice: items.reduce((sum, i) => sum + (i.price || 0) * (i.qty || 0), 0),
+					paymentStatus: "unpaid",
+					sentToKitchen,
+					sendToCashier: true,
+					orderStatus: sentToKitchen ? "in-kitchen" : "pending",
+					timestamp: serverTimestamp(),
+					createdAt: serverTimestamp(),
+				};
+				const docRef = await addDoc(collection(db, "orders"), { ...payload, orderId: "" });
+				await updateDoc(docRef, { orderId: docRef.id });
+				if (manualStatus) {
+					manualStatus.style.color = "var(--green)";
+					manualStatus.textContent = "Order added to cashier dashboard.";
+				}
+				resetManualForm();
+			} catch (err) {
+				console.error("Manual order failed", err);
+				if (manualStatus) manualStatus.textContent = "Could not add order.";
+			} finally {
+				manualSubmit.disabled = false;
+				manualSubmit.textContent = "Add order";
+			}
 		};
 
 		// Render a single order card
@@ -378,8 +591,17 @@
 
 			const handledPill = document.createElement("span");
 			const handled = (order.handledBy || "self").toLowerCase();
-			handledPill.className = "pill " + (handled === "waiter" ? "take" : "dine");
-			handledPill.textContent = handled === "waiter" ? "WAITER" : "SELF";
+			let handledClass = "dine";
+			let handledLabel = "SELF";
+			if (handled === "waiter") {
+				handledClass = "take";
+				handledLabel = "WAITER";
+			} else if (handled === "cashier") {
+				handledClass = "cashier";
+				handledLabel = "CASHIER";
+			}
+			handledPill.className = "pill " + handledClass;
+			handledPill.textContent = handledLabel;
 			pills.appendChild(handledPill);
 
 			const status = (order.paymentStatus || "unpaid").toLowerCase();
@@ -518,6 +740,15 @@
 				categoryNav.appendChild(btn);
 			});
 		};
+
+		manualAddItemBtn?.addEventListener("click", () => {
+			manualItems.push(emptyManualItem());
+			renderManualItems();
+		});
+
+		manualSubmit?.addEventListener("click", submitManualOrder);
+
+		renderManualItems();
 
 		// Live listener (activated only when authenticated)
 		let unsubscribe = null;
